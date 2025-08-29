@@ -6,6 +6,27 @@ import Position from '@common/models/model.position';
 import User from '@common/models/model.user';
 import { getQuote } from '@/utils/zeroEx';
 import { getERC20Price } from '@/utils/getERC20Price';
+import fs from 'fs';
+import path from 'path';
+
+// In a production environment, this should be replaced with a call to a secret manager.
+function getSecrets() {
+  // For local development, we are reading from a file. This is not secure for production.
+  // Replace this with a call to your secrets management service.
+  try {
+    const secretsPath = path.resolve(process.cwd(), 'src/config/secrets.json');
+    const secrets = JSON.parse(fs.readFileSync(secretsPath, 'utf8'));
+    return secrets;
+  } catch (error) {
+    console.error('Error reading secrets file:', error);
+    // In production, you would want to handle this more gracefully.
+    // For example, by throwing an error that stops the application from starting.
+    return {
+      BOT_PRIVATE_KEY: '',
+      CRON_SECRET: '',
+    };
+  }
+}
 
 export function calculateLiquidationPrice(
   entryPrice: number,
@@ -127,9 +148,10 @@ export async function executeClosePosition(
 
   const user = position.user as any;
 
+  const secrets = getSecrets();
   // In a production environment, the BOT_PRIVATE_KEY should be stored in a secure secrets manager.
-  if (!process.env.BOT_PRIVATE_KEY) {
-    throw new Error('BOT_PRIVATE_KEY is not set');
+  if (!secrets.BOT_PRIVATE_KEY) {
+    throw new Error('BOT_PRIVATE_KEY is not set in secrets.json');
   }
 
   const quote = await getQuote({
@@ -140,9 +162,9 @@ export async function executeClosePosition(
   });
 
   const botWallet = createWalletClient({
-    account: privateKeyToAccount(process.env.BOT_PRIVATE_KEY as `0x${string}`),
+    account: privateKeyToAccount(secrets.BOT_PRIVATE_KEY as `0x${string}`),
     chain: base,
-    transport: http(),
+    transport: http(process.env.BASE_RPC_URL),
   }).extend(publicActions);
 
   const hash = await botWallet.sendTransaction({

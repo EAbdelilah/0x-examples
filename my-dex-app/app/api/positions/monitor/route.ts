@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { startMonitoring } from '../../../../utils/monitoringService';
+import { startMonitoring } from '@/utils/monitoringService';
 
 export async function POST(req: NextRequest) {
   try {

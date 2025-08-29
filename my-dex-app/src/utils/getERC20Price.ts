@@ -53,23 +53,27 @@ const aggregatorV3InterfaceABI = [
 
 const publicClient = createPublicClient({
   chain: base,
-  transport: http(),
+  transport: http(process.env.BASE_RPC_URL),
 });
 
-// This function now only gets the price of ETH/USD on Base.
-// A production implementation would need a mapping from tokenAddress to price feed address.
+import { priceFeeds } from '@/config/priceFeeds';
+
+// This function now gets the price of a token from a mapping of price feeds.
 export async function getERC20Price(tokenAddress: string): Promise<number> {
-  // For now, we assume the token is WETH and we get the ETH/USD price.
-  const ethUsdPriceFeedAddress = '0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70';
+  const priceFeedAddress = priceFeeds[tokenAddress];
+
+  if (!priceFeedAddress) {
+    throw new Error(`Price feed not found for token: ${tokenAddress}`);
+  }
 
   const data = await publicClient.readContract({
-    address: ethUsdPriceFeedAddress,
+    address: priceFeedAddress as `0x${string}`,
     abi: aggregatorV3InterfaceABI,
     functionName: 'latestRoundData',
   });
 
   const decimals = await publicClient.readContract({
-    address: ethUsdPriceFeedAddress,
+    address: priceFeedAddress as `0x${string}`,
     abi: aggregatorV3InterfaceABI,
     functionName: 'decimals',
   });

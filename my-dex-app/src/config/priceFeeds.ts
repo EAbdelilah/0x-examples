@@ -1,0 +1,5 @@
+export const priceFeeds: { [key: string]: string } = {
+  'WETH': '0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70', // ETH / USD
+  'WBTC': '0x1a47367F138A75A5134A64A41254641A5890875A', // BTC / USD
+  'cbETH': '0x82b5835944199d799298d246F1f32485E923946c', // cbETH / USD
+};
