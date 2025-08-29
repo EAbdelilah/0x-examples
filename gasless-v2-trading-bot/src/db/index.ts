@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 
 import url from './config';
-import User from './models/model.user';
-import Order from './models/model.order';
-import Trade from './models/model.trade';
+import User from '@common/models/model.user';
+import Position from '@common/models/model.position';
+import Trade from '@common/models/model.trade';
 
 /**
  * Establishes a connection to the MongoDB database using Mongoose.
@@ -39,4 +39,4 @@ const connect = (): void => {
   }
 };
 
-export { connect, User, Order, Trade };
+export { connect, User, Position, Trade };

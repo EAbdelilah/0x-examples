@@ -14,7 +14,7 @@ import { Schema, model } from 'mongoose';
 const tradeSchema = new Schema({
   orderId: {
     type: Schema.Types.ObjectId,
-    ref: 'Order',
+    ref: 'Position',
     required: true,
   },
   txnHash: {

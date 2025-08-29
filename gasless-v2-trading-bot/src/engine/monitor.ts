@@ -54,7 +54,9 @@ class TokenMonitor extends EventEmitter {
     sl: number,
     timeout: number,
     currentPrice: number,
-    erc20Decimals: number
+    erc20Decimals: number,
+    private liquidationPrice: number,
+    private positionType: 'long' | 'short'
   ) {
     super();
     this.contractAddress = contractAddress;
@@ -63,6 +65,8 @@ class TokenMonitor extends EventEmitter {
     this.timeout = timeout;
     this.currentPrice = currentPrice;
     this.erc20Decimals = erc20Decimals;
+    this.liquidationPrice = liquidationPrice;
+    this.positionType = positionType;
   }
 
   startMonitoring() {
@@ -98,6 +102,13 @@ class TokenMonitor extends EventEmitter {
       ) {
         s.stop('Monitoring Stopped');
         this.emit('slReached', newPrice);
+      } else if (
+        newPrice !== null &&
+        ((this.positionType === 'long' && newPrice <= this.liquidationPrice) ||
+          (this.positionType === 'short' && newPrice >= this.liquidationPrice))
+      ) {
+        s.stop('Monitoring Stopped');
+        this.emit('liquidationReached', newPrice);
       }
       totalTimeforTrade += interval;
     }, interval); // Check every 5 seconds
