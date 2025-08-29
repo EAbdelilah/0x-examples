@@ -1,22 +1,26 @@
 import { Schema, model } from 'mongoose';
 
-// Order Schema
+// Position Schema
 /**
- * Schema definition for an Order.
+ * Schema definition for a Position.
  *
  * @property {ObjectId} user - Reference to the User who placed the order. Required.
  * @property {string} tokenAddress - The address of the token involved in the order. Required.
  * @property {Date} timestamp - The timestamp when the order was created. Defaults to the current date and time.
- * @property {number} amount - The amount of tokens involved in the order. Required.
+ * @property {number} collateral - The amount of user funds allocated to the position. Required.
+ * @property {number} tokenAmount - The amount of tokens involved in the position. Required.
  * @property {number} decimals - The number of decimal places for the token amount. Required.
  * @property {number} [tp] - The take profit value for the order. Optional.
  * @property {number} [sl] - The stop loss value for the order. Optional.
  * @property {number} pnl - The profit and loss value for the order. Required.
  * @property {number} timeout - The timeout value for the order. Required.
- * @property {boolean} completed - Indicates whether the order is completed. Defaults to false.
+ * @property {string} status - The current status of the position ('open', 'closed', or 'liquidated'). Required.
  * @property {ObjectId[]} trades - Array of references to Trade documents associated with the order.
+ * @property {number} leverage - The leverage used for the position. Required.
+ * @property {string} type - The position type ('long' or 'short'). Required.
+ * @property {number} liquidationPrice - The price at which the position will be liquidated. Required.
  */
-const orderSchema = new Schema({
+const positionSchema = new Schema({
   user: {
     type: Schema.Types.ObjectId,
     ref: 'User',
@@ -30,7 +34,7 @@ const orderSchema = new Schema({
     type: Date,
     default: Date.now,
   },
-  amount: {
+  collateral: {
     type: Number,
     required: true,
   },
@@ -56,9 +60,10 @@ const orderSchema = new Schema({
     type: Number,
     required: true,
   },
-  completed: {
-    type: Boolean,
-    default: false,
+  status: {
+    type: String,
+    required: true,
+    default: 'open',
   },
   trades: [
     {
@@ -66,7 +71,19 @@ const orderSchema = new Schema({
       ref: 'Trade',
     },
   ],
+  leverage: {
+    type: Number,
+    required: true,
+  },
+  type: {
+    type: String,
+    required: true,
+  },
+  liquidationPrice: {
+    type: Number,
+    required: true,
+  },
 });
 
-const Order = model('Order', orderSchema);
-export default Order;
+const Position = model('Position', positionSchema);
+export default Position;

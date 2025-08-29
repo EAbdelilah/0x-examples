@@ -3,7 +3,7 @@
 import chalk from 'chalk';
 import figlet from 'figlet';
 import { program } from 'commander';
-import { intro, text, isCancel } from '@clack/prompts';
+import { intro, text, isCancel, select } from '@clack/prompts';
 import Validator from './utils/validate'; // Import the Validator class
 import TradeEngine from './engine'; // Import the TradeEngine class
 
@@ -38,6 +38,26 @@ program
           : 'Invalid private key. Please enter a valid 64-character hexadecimal string.',
     });
     if (isCancel(privateKey)) process.exit(0);
+
+    const position = await select({
+      message: 'Select position type',
+      options: [
+        { value: 'long', label: 'Long' },
+        { value: 'short', label: 'Short' },
+      ],
+    });
+    if (isCancel(position)) process.exit(0);
+
+    const leverage = await text({
+      message: 'Enter Leverage (Range: 1 - 100):',
+      validate: (value) => {
+        const num = parseFloat(value);
+        return Validator.isValidLeverage(num)
+          ? undefined
+          : 'Invalid Leverage. Please enter a value between 1 and 100.';
+      },
+    });
+    if (isCancel(leverage)) process.exit(0);
 
     const stopLoss = await text({
       message: 'Enter Stop Loss Percentage (Range: 0 - 100):',
@@ -90,7 +110,9 @@ program
       stopLoss,
       takeProfit,
       amountETH,
-      timeout
+      timeout,
+      position,
+      leverage
     );
     engine.startTrade();
   });

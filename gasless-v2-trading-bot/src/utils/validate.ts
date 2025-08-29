@@ -58,6 +58,16 @@ class Validator {
     // Timeout must be a positive integer.
     return Number.isInteger(timeout) && timeout > 0;
   }
+
+  /**
+   * Validates leverage value.
+   * @param leverage - The leverage value to validate.
+   * @returns true if valid, false otherwise.
+   */
+  static isValidLeverage(leverage: number): boolean {
+    //leverage must be a positive number, and reasonable (e.g., between 1 and 100).
+    return !isNaN(leverage) && leverage > 0 && leverage <= 100;
+  }
 }
 
 export default Validator;
