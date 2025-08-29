@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 
 import url from './config';
-import User from './models/model.user';
-import Position from './models/model.position';
-import Trade from './models/model.trade';
+import User from '@common/models/model.user';
+import Position from '@common/models/model.position';
+import Trade from '@common/models/model.trade';
 
 /**
  * Establishes a connection to the MongoDB database using Mongoose.

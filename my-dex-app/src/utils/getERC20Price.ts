@@ -1,36 +1,81 @@
-const ZERO_EX_API_KEY = process.env.ZERO_EX_API_KEY;
-const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bda02913'; // USDC on Base
-const CHAIN_ID = '8453'; // Base mainnet
-const USDC_DECIMALS = 6;
+import { createPublicClient, http, formatUnits } from 'viem';
+import { base } from 'viem/chains';
 
-if (!ZERO_EX_API_KEY) {
-  throw new Error('Missing ZERO_EX_API_KEY environment variable');
-}
+const aggregatorV3InterfaceABI = [
+  {
+    inputs: [],
+    name: 'decimals',
+    outputs: [{ internalType: 'uint8', name: '', type: 'uint8' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'description',
+    outputs: [{ internalType: 'string', name: '', type: 'string' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint80', name: '_roundId', type: 'uint80' }],
+    name: 'getRoundData',
+    outputs: [
+      { internalType: 'uint80', name: 'roundId', type: 'uint80' },
+      { internalType: 'int256', name: 'answer', type: 'int256' },
+      { internalType: 'uint256', name: 'startedAt', type: 'uint256' },
+      { internalType: 'uint256', name: 'updatedAt', type: 'uint256' },
+      { internalType: 'uint80', name: 'answeredInRound', type: 'uint80' },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'latestRoundData',
+    outputs: [
+      { internalType: 'uint80', name: 'roundId', type: 'uint80' },
+      { internalType: 'int256', name: 'answer', type: 'int256' },
+      { internalType: 'uint256', name: 'startedAt', type: 'uint256' },
+      { internalType: 'uint256', name: 'updatedAt', type: 'uint256' },
+      { internalType: 'uint80', name: 'answeredInRound', type: 'uint80' },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'version',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+];
 
-const headers = {
-  '0x-api-key': ZERO_EX_API_KEY,
-};
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http(),
+});
 
+// This function now only gets the price of ETH/USD on Base.
+// A production implementation would need a mapping from tokenAddress to price feed address.
 export async function getERC20Price(tokenAddress: string): Promise<number> {
-  const params = new URLSearchParams({
-    sellToken: tokenAddress,
-    buyToken: USDC_ADDRESS,
-    sellAmount: (10 ** 18).toString(), // Assuming the token has 18 decimals
+  // For now, we assume the token is WETH and we get the ETH/USD price.
+  const ethUsdPriceFeedAddress = '0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70';
+
+  const data = await publicClient.readContract({
+    address: ethUsdPriceFeedAddress,
+    abi: aggregatorV3InterfaceABI,
+    functionName: 'latestRoundData',
   });
 
-  const url = `https://base.api.0x.org/swap/v1/price?${params.toString()}`;
+  const decimals = await publicClient.readContract({
+    address: ethUsdPriceFeedAddress,
+    abi: aggregatorV3InterfaceABI,
+    functionName: 'decimals',
+  });
 
-  const response = await fetch(url, { headers });
+  // The price is returned as a BigInt, so we need to format it to a number.
+  const price = parseFloat(formatUnits(data[1] as bigint, decimals as number));
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch price: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-
-  if (!data.price) {
-    throw new Error('Price not available');
-  }
-
-  return parseFloat(data.price);
+  return price;
 }

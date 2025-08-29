@@ -20,9 +20,11 @@
     "react-dom": "^18",
     "uuid": "^11.1.0",
     "viem": "^2.9.15",
-    "wagmi": "^2.12.16"
+    "wagmi": "^2.12.16",
+    "mongoose": "^8.4.0"
   },
   "devDependencies": {
+    "@types/mongoose": "^5.11.97",
     "@types/node": "^20",
     "@types/qs": "^6.9.14",
     "@types/react": "^18",

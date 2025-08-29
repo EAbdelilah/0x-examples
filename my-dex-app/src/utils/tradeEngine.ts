@@ -1,8 +1,11 @@
-import dbConnect from './db';
-import Position from '../models/model.position';
-import User from '../models/model.user';
-import { getQuote } from './zeroEx';
-import { getERC20Price } from './getERC20Price'; // This function needs to be created
+import { createWalletClient, http, publicActions } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import { base } from 'viem/chains';
+import dbConnect from '@/utils/db';
+import Position from '@common/models/model.position';
+import User from '@common/models/model.user';
+import { getQuote } from '@/utils/zeroEx';
+import { getERC20Price } from '@/utils/getERC20Price';
 
 export function calculateLiquidationPrice(
   entryPrice: number,
@@ -112,11 +115,10 @@ export async function closePosition(positionId: string, userAddress: string) {
   return quote;
 }
 
-import { createWalletClient, http, publicActions } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-import { base } from 'viem/chains';
-
-export async function executeClosePosition(positionId: string, closeReason: 'tp' | 'sl' | 'liquidation' | 'manual') {
+export async function executeClosePosition(
+  positionId: string,
+  closeReason: 'tp' | 'sl' | 'liquidation' | 'manual'
+) {
   await dbConnect();
   const position = await Position.findById(positionId).populate('user');
 
@@ -124,10 +126,16 @@ export async function executeClosePosition(positionId: string, closeReason: 'tp'
   if (position.status !== 'open') throw new Error('Position is not open');
 
   const user = position.user as any;
+
+  // In a production environment, the BOT_PRIVATE_KEY should be stored in a secure secrets manager.
+  if (!process.env.BOT_PRIVATE_KEY) {
+    throw new Error('BOT_PRIVATE_KEY is not set');
+  }
+
   const quote = await getQuote({
     sellToken: position.tokenAddress,
-    buyToken: 'WETH',
-    sellAmount: position.tokenAmount.toString(),
+    buyToken: 'WETH', // Assuming WETH is the collateral token
+    sellAmount: position.tokenAmount.toString(), // This should be the size of the position in the token
     takerAddress: user.walletAddress,
   });
 
@@ -147,11 +155,12 @@ export async function executeClosePosition(positionId: string, closeReason: 'tp'
   await botWallet.waitForTransactionReceipt({ hash });
 
   const exitPrice = parseFloat(quote.price);
+  const positionSize = position.collateral * position.leverage;
   let pnl;
   if (position.type === 'long') {
-    pnl = (exitPrice - position.entryPrice) * position.tokenAmount;
+    pnl = (exitPrice - position.entryPrice) * positionSize;
   } else {
-    pnl = (position.entryPrice - exitPrice) * position.tokenAmount;
+    pnl = (position.entryPrice - exitPrice) * positionSize;
   }
 
   position.status = closeReason === 'liquidation' ? 'liquidated' : 'closed';

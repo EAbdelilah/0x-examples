@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '../../../../utils/db';
-import User from '../../../../models/model.user';
-import Position from '../../../../models/model.position';
+import dbConnect from '@/utils/db';
+import User from '@common/models/model.user';
+import Position from '@common/models/model.position';
+import { closePosition } from '@/utils/tradeEngine';
 
 export async function GET(
   req: NextRequest,
@@ -43,12 +44,27 @@ export async function GET(
         { status: 500 }
       );
     }
+  } else if (action === 'get-close-quote' && id) {
+    const userAddress = searchParams.get('userAddress');
+    if (!userAddress) {
+      return NextResponse.json({ message: 'userAddress is required' }, { status: 400 });
+    }
+    try {
+      const quote = await closePosition(id, userAddress);
+      return NextResponse.json(quote);
+    } catch (error) {
+      console.error(error);
+      return NextResponse.json(
+        { message: 'Failed to get close quote', error: error.message },
+        { status: 500 }
+      );
+    }
   }
 
   return NextResponse.json({ message: 'Invalid action or missing parameters' }, { status: 400 });
 }
 
-import { openPosition } from '../../../../utils/tradeEngine';
+import { openPosition } from '@/utils/tradeEngine';
 
 export async function POST(
   req: NextRequest,
@@ -68,12 +84,58 @@ export async function POST(
         { status: 500 }
       );
     }
+  } else if (action === 'confirm-open') {
+    try {
+      const { positionId, txHash } = await req.json();
+      const position = await Position.findById(positionId);
+      if (!position) {
+        return NextResponse.json({ message: 'Position not found' }, { status: 404 });
+      }
+      position.status = 'open';
+      position.openTxHash = txHash;
+      await position.save();
+      return NextResponse.json(position);
+    } catch (error) {
+      console.error(error);
+      return NextResponse.json(
+        { message: 'Failed to confirm position', error: error.message },
+        { status: 500 }
+      );
+    }
+  } else if (action === 'confirm-close') {
+    try {
+      const { positionId, txHash, exitPrice } = await req.json();
+      const position = await Position.findById(positionId);
+      if (!position) {
+        return NextResponse.json({ message: 'Position not found' }, { status: 404 });
+      }
+
+      const positionSize = position.collateral * position.leverage;
+      let pnl;
+      if (position.type === 'long') {
+        pnl = (exitPrice - position.entryPrice) * positionSize;
+      } else {
+        pnl = (position.entryPrice - exitPrice) * positionSize;
+      }
+
+      position.status = 'closed';
+      position.closeTxHash = txHash;
+      position.pnl = pnl;
+      await position.save();
+      return NextResponse.json(position);
+    } catch (error) {
+      console.error(error);
+      return NextResponse.json(
+        { message: 'Failed to confirm close', error: error.message },
+        { status: 500 }
+      );
+    }
   }
 
   return NextResponse.json({ message: 'Invalid action' }, { status: 400 });
 }
 
-import { executeClosePosition } from '../../../../utils/tradeEngine';
+import { executeClosePosition } from '@/utils/tradeEngine';
 
 export async function DELETE(
   req: NextRequest,

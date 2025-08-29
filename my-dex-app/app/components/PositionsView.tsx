@@ -43,17 +43,45 @@ export default function PositionsView() {
 
   useEffect(() => {
     fetchPositions();
-    // Refresh positions every 30 seconds
-    const interval = setInterval(fetchPositions, 30000);
+    const interval = setInterval(fetchPositions, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, [address]);
 
   const handleClosePosition = async (positionId: string) => {
+    if (!walletClient || !address) {
+      alert('Please connect your wallet');
+      return;
+    }
     try {
-      await fetch(`/api/positions/close/${positionId}`, {
-        method: 'DELETE',
+      // 1. Get close quote
+      const response = await fetch(`/api/positions/get-close-quote/${positionId}?userAddress=${address}`);
+      if (!response.ok) {
+        throw new Error('Failed to get close quote');
+      }
+      const quote = await response.json();
+
+      // 2. User signs and sends transaction
+      const hash = await walletClient.sendTransaction({
+        to: quote.to,
+        data: quote.data,
+        value: BigInt(quote.value),
+        gasLimit: quote.gas,
       });
-      alert('Position is being closed.');
+
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      // 3. Confirm close with backend
+      await fetch('/api/positions/confirm-close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          positionId,
+          txHash: hash,
+          exitPrice: parseFloat(quote.price),
+        }),
+      });
+
+      alert('Position closed successfully.');
       fetchPositions(); // Refresh the list
     } catch (error) {
       console.error(error);

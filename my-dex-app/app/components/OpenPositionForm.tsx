@@ -52,16 +52,10 @@ export default function OpenPositionForm() {
 
       await publicClient.waitForTransactionReceipt({ hash });
 
-      await fetch('/api/positions/update-tx-hash', {
+      await fetch('/api/positions/confirm-open', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ positionId: quote.positionId, txHash: hash, type: 'open' }),
-      });
-
-      await fetch('/api/positions/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ txHash: hash, status: 'open' }),
+        body: JSON.stringify({ positionId: quote.positionId, txHash: hash }),
       });
 
       await fetch('/api/positions/monitor', {
