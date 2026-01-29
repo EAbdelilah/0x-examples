@@ -8,7 +8,7 @@ const PORT = 3001;
 process.env.PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 process.env.ZERO_EX_API_KEY = "test-key";
 
-describe("RFQ API Wrapper", () => {
+describe("RFQ API Wrapper Integration", () => {
   beforeAll(() => {
     server = app.listen(PORT);
   });
@@ -23,10 +23,15 @@ describe("RFQ API Wrapper", () => {
     expect(data.status).toBe("ok");
   });
 
-  test("1inch adapter return signed order structure", async () => {
-    const response = await fetch(`http://localhost:${PORT}/api/v1/1inch/quote?fromTokenAddress=0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee&toTokenAddress=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&amount=100000000000000`);
+  test("1inch adapter - validation failure on missing params", async () => {
+    const response = await fetch(`http://localhost:${PORT}/api/v1/1inch/quote`);
+    expect(response.status).toBe(400);
+    const data: any = await response.json();
+    expect(data.error).toBe("Validation failed");
+  });
 
-    // It will still fail 500 because of 0x API key but we want to see if it reaches the service
-    // If we wanted to fully test it, we would need to mock axios.
+  test("1inch adapter - validation failure on invalid address", async () => {
+    const response = await fetch(`http://localhost:${PORT}/api/v1/1inch/quote?fromTokenAddress=invalid&toTokenAddress=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&amount=100`);
+    expect(response.status).toBe(400);
   });
 });

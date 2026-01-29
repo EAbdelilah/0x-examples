@@ -1,5 +1,6 @@
 import axios from "axios";
 import { config } from "dotenv";
+import logger from "../utils/logger";
 
 config();
 
@@ -20,6 +21,13 @@ export interface ZeroExPriceParams {
   taker?: string;
 }
 
+export class ZeroExError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = "ZeroExError";
+  }
+}
+
 export const getZeroExPrice = async (params: ZeroExPriceParams) => {
   try {
     const response = await axios.get(`${ZERO_EX_API_URL}/swap/permit2/price`, {
@@ -28,8 +36,10 @@ export const getZeroExPrice = async (params: ZeroExPriceParams) => {
     });
     return response.data;
   } catch (error: any) {
-    console.error("Error fetching price from 0x:", error.response?.data || error.message);
-    throw error;
+    const status = error.response?.status || 500;
+    const message = error.response?.data?.message || error.message;
+    logger.error("Error fetching price from 0x", { status, message, params });
+    throw new ZeroExError(status, message);
   }
 };
 
@@ -41,7 +51,9 @@ export const getZeroExQuote = async (params: ZeroExPriceParams) => {
     });
     return response.data;
   } catch (error: any) {
-    console.error("Error fetching quote from 0x:", error.response?.data || error.message);
-    throw error;
+    const status = error.response?.status || 500;
+    const message = error.response?.data?.message || error.message;
+    logger.error("Error fetching quote from 0x", { status, message, params });
+    throw new ZeroExError(status, message);
   }
 };

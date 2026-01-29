@@ -1,6 +1,25 @@
-import { createWalletClient, http } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { createWalletClient, http, WalletClient } from "viem";
+import { privateKeyToAccount, Account } from "viem/accounts";
 import { mainnet } from "viem/chains";
+
+let _account: Account | null = null;
+let _client: any = null;
+
+const getClient = () => {
+  if (_client) return { client: _client, account: _account };
+
+  const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
+  if (!PRIVATE_KEY) return { client: null, account: null };
+
+  _account = privateKeyToAccount(PRIVATE_KEY);
+  _client = createWalletClient({
+    account: _account,
+    chain: mainnet,
+    transport: http(),
+  });
+
+  return { client: _client, account: _account };
+};
 
 export const ONE_INCH_RFQ_TYPES = {
   OrderRFQ: [
@@ -27,19 +46,16 @@ export const PARASWAP_RFQ_TYPES = {
   ],
 };
 
+export const getMakerAddress = () => getClient().account?.address;
+
 export const signRfqOrder = async (
-  privateKey: `0x${string}`,
   domain: any,
   types: any,
   message: any,
   primaryType: string
 ) => {
-  const account = privateKeyToAccount(privateKey);
-  const client = createWalletClient({
-    account,
-    chain: mainnet,
-    transport: http(),
-  });
+  const { client } = getClient();
+  if (!client) throw new Error("Wallet client not initialized. Check PRIVATE_KEY.");
 
   const signature = await client.signTypedData({
     domain,
