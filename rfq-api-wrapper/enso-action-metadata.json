@@ -1,0 +1,17 @@
+{
+  "name": "0x Liquidity Action",
+  "description": "Provides liquidity by calling 0x Swap API v2",
+  "author": "PMM",
+  "actions": [
+    {
+      "name": "swap",
+      "description": "Swap tokens using 0x",
+      "args": [
+        { "name": "fromToken", "type": "address" },
+        { "name": "toToken", "type": "address" },
+        { "name": "amount", "type": "uint256" }
+      ],
+      "endpoint": "https://your-api.com/quote/enso"
+    }
+  ]
+}

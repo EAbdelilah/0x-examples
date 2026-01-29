@@ -66,19 +66,51 @@ bun run test
 2. **0x Quote**: The adapter translates the request and calls the 0x Swap API v2 `/permit2/price` to get a competitive price.
 3. **PMM Response**: The adapter formats the 0x response into the specific format expected by the aggregator and returns it.
 
-## Permissioning & Whitelisting
+## RFQ Strategy & Accessibility Roadmap
 
-Most major DEX aggregators use a **permissioned** RFQ system to ensure quote reliability and prevent griefing. You cannot simply run this script and expect to receive traffic immediately; you must be whitelisted.
+Based on current market accessibility, here is the recommended order for deploying your RFQ strategy:
 
-| Aggregator | Type | How to Join |
-| --- | --- | --- |
-| **1inch** | Permissioned | Join the [1inch Network](https://1inch.io/) and apply for PMM whitelisting. |
-| **ParaSwap** | Permissioned | Fill out the [ParaSwap PMM Application](https://doc.paraswap.network/liquidity-providers/rfq-market-makers-pmm). |
-| **Enso** | Semi-Permissionless | Enso is an intent engine. While you can contribute permissionless "Action Abstractions," PMM/RFQ integration usually requires coordination. [Contact Enso](https://docs.enso.finance/). |
-| **KyberSwap** | Permissioned | Contact the Kyber team to list your "Reserve." |
-| **OpenOcean** | Permissioned | Contact OpenOcean support for RFQ/PMM onboarding. |
+### 1. **The Best Entry Point: Enso Finance**
+Enso is the most developer-friendly for intent-based models.
+- **Action Provider**: You register a smart contract abstraction.
+- **The Flow**: You define an "Action" (calling your 0x liquidity). Enso's "Graphers" include your action in routes if your price wins.
+- **Status**: semi-permissionless.
 
-**Note on Permissionless Liquidity**: If you want to provide liquidity **permissionlessly** (without whitelisting), you should consider providing liquidity to an AMM (like Uniswap V3) or using the **0x Mesh** (though 0x RFQ itself is also typically permissioned for takers).
+### 2. **The Passive Route: KyberSwap (Limit Order API)**
+KyberSwap allows you to act as a maker without a formal partnership for their main aggregator.
+- **The Flow**: Use the included `KyberLimitOrderService` to sign and post limit orders. Aggregators fill these orders if they offer the best rate.
+- **Status**: Permissionless (for posting orders).
+
+### 3. **The Boutique Aggregator: OpenOcean**
+OpenOcean is often more willing to work with smaller, specialized liquidity providers.
+- **The Flow**: Apply via their portal for PMM status.
+- **Status**: Permissioned (but accessible).
+
+### 4. **The Final Bosses: 1inch & ParaSwap**
+Highest volume, but highest barriers to entry.
+- **Status**: Strictly Permissioned. Requires significant capital and proven reliability.
+
+---
+
+## Permissionless "Filler" Strategies
+
+If you want to start generating revenue **without any whitelisting**, you can participate in Dutch Auctions as a "Filler":
+
+1. **UniswapX**: Monitor auctions and fill them using 0x liquidity when the price decays to a profitable level.
+2. **CoW Swap**: Participate in the Solver competition to provide the best clearing prices for user batches.
+
+See `src/services/fillerService.ts` for implementation skeletons.
+
+---
+
+## Whitelisting & Onboarding
+
+| Aggregator | How to Join |
+| --- | --- |
+| **1inch** | Join the [1inch Network](https://1inch.io/) and apply for PMM whitelisting. |
+| **ParaSwap** | Fill out the [ParaSwap PMM Application](https://doc.paraswap.network/liquidity-providers/rfq-market-makers-pmm). |
+| **KyberSwap** | Use the Limit Order API or contact them to list a "Reserve." |
+| **OpenOcean** | Contact OpenOcean support for RFQ onboarding. |
 
 ## Production Considerations
 

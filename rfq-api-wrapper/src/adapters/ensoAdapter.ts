@@ -11,6 +11,13 @@ const EnsoQuoteSchema = z.object({
   fromAddress: z.string().optional(),
 });
 
+/**
+ * Enso Finance Adapter
+ *
+ * Enso acts as an "Intent Engine". As an Action Provider, you define
+ * smart contract interactions. This adapter provides the pricing logic
+ * that Enso's "Graphers" use to include your liquidity in their routes.
+ */
 export class EnsoAdapter extends BaseAdapter {
   constructor(zeroExService: ZeroExService) {
     super('Enso', zeroExService);

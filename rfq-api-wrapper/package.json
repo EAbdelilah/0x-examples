@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "bun run src/index.ts",
+    "maker": "bun run src/maker.ts",
     "dev": "bun --watch src/index.ts",
     "test": "vitest",
     "lint": "tsc --noEmit"
