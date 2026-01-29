@@ -46,6 +46,24 @@ export const PARASWAP_RFQ_TYPES = {
   ],
 };
 
+export const KYBERSWAP_RFQ_TYPES = {
+  Order: [
+    { name: "salt", type: "uint256" },
+    { name: "makerAsset", type: "address" },
+    { name: "takerAsset", type: "address" },
+    { name: "maker", type: "address" },
+    { name: "receiver", type: "address" },
+    { name: "allowedSender", type: "address" },
+    { name: "makingAmount", type: "uint256" },
+    { name: "takingAmount", type: "uint256" },
+    { name: "feeConfig", type: "uint256" },
+    { name: "makerAssetData", type: "bytes" },
+    { name: "takerAssetData", type: "bytes" },
+    { name: "getMakerAmount", type: "bytes" },
+    { name: "getTakerAmount", type: "bytes" },
+  ],
+};
+
 export const getMakerAddress = () => getClient().account?.address;
 
 export const signRfqOrder = async (
