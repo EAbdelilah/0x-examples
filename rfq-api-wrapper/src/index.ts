@@ -4,18 +4,60 @@ import adapterRoutes from "./routes/adapters";
 import logger from "./utils/logger";
 import { z } from "zod";
 import { ZeroExError } from "./services/zeroExService";
+import { rateLimit } from "express-rate-limit";
+import { Registry, collectDefaultMetrics, Counter, Histogram } from "prom-client";
 
 config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Prometheus Metrics setup
+const register = new Registry();
+collectDefaultMetrics({ register });
+
+export const httpRequestCounter = new Counter({
+  name: "http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status"],
+  registers: [register],
+});
+
+export const httpRequestDuration = new Histogram({
+  name: "http_request_duration_seconds",
+  help: "Duration of HTTP requests in seconds",
+  labelNames: ["method", "route"],
+  registers: [register],
+});
+
 app.use(express.json());
 
-// Request logging middleware
+// Rate limiting middleware
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." },
+});
+app.use(limiter);
+
+// Request logging and metrics middleware
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.url}`);
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = (Date.now() - start) / 1000;
+    httpRequestCounter.inc({ method: req.method, route: req.path, status: res.statusCode });
+    httpRequestDuration.observe({ method: req.method, route: req.path }, duration);
+    logger.info(`${req.method} ${req.url} ${res.statusCode} - ${duration}s`);
+  });
   next();
+});
+
+// Metrics endpoint
+app.get("/metrics", async (req, res) => {
+  res.set("Content-Type", register.contentType);
+  res.end(await register.metrics());
 });
 
 // Health check

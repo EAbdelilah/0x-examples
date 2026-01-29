@@ -17,35 +17,51 @@ router.use(authMiddleware);
 const OneInchQuoteSchema = z.object({
   fromTokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
   toTokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-  amount: z.string().regex(/^\d+$/),
+  amount: z.string().regex(/^\d+$/).optional(),
+  buyAmount: z.string().regex(/^\d+$/).optional(),
   takerAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
   chainId: z.string().regex(/^\d+$/).default("1"),
+}).refine(data => data.amount || data.buyAmount, {
+  message: "Either amount (sellAmount) or buyAmount must be provided",
 });
 
 const ParaSwapQuoteSchema = z.object({
   sellToken: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
   buyToken: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-  sellAmount: z.string().regex(/^\d+$/),
+  sellAmount: z.string().regex(/^\d+$/).optional(),
+  buyAmount: z.string().regex(/^\d+$/).optional(),
   taker: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
   chainId: z.string().regex(/^\d+$/).default("1"),
+}).refine(data => data.sellAmount || data.buyAmount, {
+  message: "Either sellAmount or buyAmount must be provided",
 });
 
 // 1inch adapter
 router.get("/1inch/quote", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validated = OneInchQuoteSchema.parse(req.query);
-    const { fromTokenAddress, toTokenAddress, amount, takerAddress, chainId } = validated;
+    const { fromTokenAddress, toTokenAddress, amount, buyAmount, takerAddress, chainId } = validated;
     const cId = Number(chainId);
 
-    const price = await getZeroExPrice({ chainId, sellToken: fromTokenAddress, buyToken: toTokenAddress, sellAmount: amount, taker: takerAddress });
+    const price = await getZeroExPrice({
+      chainId,
+      sellToken: fromTokenAddress,
+      buyToken: toTokenAddress,
+      sellAmount: amount,
+      buyAmount: buyAmount,
+      taker: takerAddress,
+    });
 
     const adjustedBuyAmount = applySpread(price.buyAmount, SPREAD_BPS, true);
+    const adjustedSellAmount = applySpread(price.sellAmount, SPREAD_BPS, false);
+
     const makerAddress = getMakerAddress();
     if (!makerAddress) throw new Error("Maker address not available");
 
     const expiration = Math.floor(Date.now() / 1000) + 300;
-    const nonce = BigInt(Math.floor(Math.random() * 1000000));
-    const info = (BigInt(expiration) << 192n) | nonce;
+    // Better Nonce: high bits timestamp, low bits random
+    const nonce = (BigInt(Date.now()) << 64n) | BigInt(Math.floor(Math.random() * 1000000000));
+    const info = (BigInt(expiration) << 192n) | (nonce & ((1n << 192n) - 1n));
 
     const order = {
       info,
@@ -54,7 +70,7 @@ router.get("/1inch/quote", async (req: Request, res: Response, next: NextFunctio
       maker: makerAddress,
       allowedSender: (takerAddress as `0x${string}`) || "0x0000000000000000000000000000000000000000",
       makingAmount: BigInt(adjustedBuyAmount),
-      takingAmount: BigInt(amount),
+      takingAmount: BigInt(adjustedSellAmount),
     };
 
     const signature = await signRfqOrder(
@@ -64,7 +80,7 @@ router.get("/1inch/quote", async (req: Request, res: Response, next: NextFunctio
       "OrderRFQ"
     );
 
-    res.json({ order, signature, quote: { buyAmount: adjustedBuyAmount, gas: price.gas } });
+    res.json({ order, signature, quote: { buyAmount: adjustedBuyAmount, sellAmount: adjustedSellAmount, gas: price.gas } });
   } catch (error) { next(error); }
 });
 
@@ -72,17 +88,19 @@ router.get("/1inch/quote", async (req: Request, res: Response, next: NextFunctio
 router.get("/paraswap/quote", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validated = ParaSwapQuoteSchema.parse(req.query);
-    const { sellToken, buyToken, sellAmount, taker, chainId } = validated;
+    const { sellToken, buyToken, sellAmount, buyAmount, taker, chainId } = validated;
     const cId = Number(chainId);
 
-    const price = await getZeroExPrice({ chainId, sellToken, buyToken, sellAmount, taker });
+    const price = await getZeroExPrice({ chainId, sellToken, buyToken, sellAmount, buyAmount, taker });
 
     const adjustedBuyAmount = applySpread(price.buyAmount, SPREAD_BPS, true);
+    const adjustedSellAmount = applySpread(price.sellAmount, SPREAD_BPS, false);
+
     const makerAddress = getMakerAddress();
     if (!makerAddress) throw new Error("Maker address not available");
 
     const expiry = Math.floor(Date.now() / 1000) + 300;
-    const nonce = BigInt(Math.floor(Math.random() * 1000000));
+    const nonce = (BigInt(Date.now()) << 64n) | BigInt(Math.floor(Math.random() * 1000000000));
 
     const order = {
       nonce,
@@ -92,7 +110,7 @@ router.get("/paraswap/quote", async (req: Request, res: Response, next: NextFunc
       maker: makerAddress,
       taker: (taker as `0x${string}`) || "0x0000000000000000000000000000000000000000",
       makerAmount: BigInt(adjustedBuyAmount),
-      takerAmount: BigInt(sellAmount),
+      takerAmount: BigInt(adjustedSellAmount),
     };
 
     const signature = await signRfqOrder(
@@ -102,38 +120,7 @@ router.get("/paraswap/quote", async (req: Request, res: Response, next: NextFunc
       "Order"
     );
 
-    res.json({ order, signature, quote: { buyAmount: adjustedBuyAmount, gas: price.gas } });
-  } catch (error) { next(error); }
-});
-
-// Generic / Template for others (Enso, OpenOcean, KyberSwap)
-router.get("/generic/quote", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { sellToken, buyToken, sellAmount, taker, chainId } = req.query;
-    const price = await getZeroExPrice({
-      chainId: (chainId as string) || "1",
-      sellToken: sellToken as string,
-      buyToken: buyToken as string,
-      sellAmount: sellAmount as string,
-      taker: taker as string,
-    });
-
-    const adjustedBuyAmount = applySpread(price.buyAmount, SPREAD_BPS, true);
-
-    // Most aggregators just need the quote first, then they will ask for a signed order
-    // if they decide to use your quote.
-    res.json({
-      maker: getMakerAddress(),
-      sellToken,
-      buyToken,
-      sellAmount,
-      buyAmount: adjustedBuyAmount,
-      gas: price.gas,
-      meta: {
-        engine: "0x-v2",
-        spreadBps: SPREAD_BPS
-      }
-    });
+    res.json({ order, signature, quote: { buyAmount: adjustedBuyAmount, sellAmount: adjustedSellAmount, gas: price.gas } });
   } catch (error) { next(error); }
 });
 
