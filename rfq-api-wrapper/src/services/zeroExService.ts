@@ -14,10 +14,24 @@ export interface ZeroExPriceParams {
 
 export class ZeroExService {
   private readonly apiKey: string;
-  private readonly baseUrl = 'https://api.0x.org/swap/permit2';
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
+  }
+
+  private getBaseUrl(chainId: number): string {
+    const chainMap: Record<number, string> = {
+      1: '',
+      10: 'optimism.',
+      56: 'bsc.',
+      137: 'polygon.',
+      8453: 'base.',
+      42161: 'arbitrum.',
+      43114: 'avalanche.',
+      11155111: 'sepolia.',
+    };
+    const prefix = chainMap[chainId] ?? '';
+    return `https://${prefix}api.0x.org/swap/permit2`;
   }
 
   async getPrice(params: ZeroExPriceParams) {
@@ -26,7 +40,7 @@ export class ZeroExService {
         ...params,
         chainId: params.chainId.toString(),
       });
-      const url = `${this.baseUrl}/price?${query}`;
+      const url = `${this.getBaseUrl(params.chainId)}/price?${query}`;
 
       logger.debug(`Fetching price from 0x: ${url}`);
       const response = await axios.get(url, {
@@ -52,7 +66,7 @@ export class ZeroExService {
         ...params,
         chainId: params.chainId.toString(),
       });
-      const url = `${this.baseUrl}/quote?${query}`;
+      const url = `${this.getBaseUrl(params.chainId)}/quote?${query}`;
 
       logger.debug(`Fetching quote from 0x: ${url}`);
       const response = await axios.get(url, {

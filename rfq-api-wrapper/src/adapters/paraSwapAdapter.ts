@@ -46,6 +46,9 @@ export class ParaSwapAdapter extends BaseAdapter {
       price: zeroExPrice.buyAmount,
       guaranteedPrice: zeroExPrice.minBuyAmount || zeroExPrice.buyAmount,
       address: this.account.address,
+      // Optional: specify limits for this pair
+      minAmount: '1',
+      maxAmount: '1000000000000000000000000',
     };
 
     if (validated.isFirmQuote) {
@@ -70,12 +73,15 @@ export class ParaSwapAdapter extends BaseAdapter {
             ],
         };
 
+        const randomValues = new Uint32Array(1);
+        crypto.getRandomValues(randomValues);
+
         const message = {
             from: validated.from as Hex,
             to: validated.to as Hex,
             amount: BigInt(validated.amount),
             price: BigInt(zeroExPrice.buyAmount),
-            salt: BigInt(Math.floor(Math.random() * 1000000)),
+            salt: BigInt(randomValues[0]),
             expiry: BigInt(Math.floor(Date.now() / 1000) + 60), // 60 seconds
         };
 

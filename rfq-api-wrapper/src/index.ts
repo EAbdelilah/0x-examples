@@ -42,15 +42,22 @@ app.get('/health', (req, res) => {
 // Register adapter routes
 adapters.forEach(adapter => {
   const route = `/quote/${adapter.name.toLowerCase()}`;
-  app.get(route, async (req, res, next) => {
+
+  const handler = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
-      const quote = await adapter.handleQuote(req.query);
+      // Support both query params (GET) and body (POST)
+      const data = req.method === 'GET' ? req.query : req.body;
+      const quote = await adapter.handleQuote(data);
       res.json(quote);
     } catch (error) {
       next(error);
     }
-  });
-  logger.info(`Registered route: ${route}`);
+  };
+
+  app.get(route, handler);
+  app.post(route, handler);
+
+  logger.info(`Registered GET/POST routes: ${route}`);
 });
 
 // Error handling middleware

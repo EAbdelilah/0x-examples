@@ -33,14 +33,52 @@ export class KyberSwapAdapter extends BaseAdapter {
       chainId: validated.chainId,
     });
 
-    // KyberSwap RFQ format (simplified)
-    return {
+    // KyberSwap RFQ format
+    // Note: KyberSwap often requires signing an EIP-712 message.
+    // The exact domain and types depend on the specific KyberSwap deployment.
+
+    const response = {
       maker: this.account.address,
       sellToken: validated.sellToken,
       buyToken: validated.buyToken,
       sellAmount: validated.sellAmount,
       buyAmount: zeroExPrice.buyAmount,
-      signature: '0x...', // Would implement Kyber-specific signing here
+      // signature: ...
+    };
+
+    // Example of EIP-712 signing for Kyber (placeholders for contract addresses)
+    /*
+    const signature = await this.account.signTypedData({
+        domain: {
+            name: 'KyberSwap RFQ',
+            version: '1',
+            chainId: validated.chainId,
+            verifyingContract: '0x...', // Kyber RFQ contract
+        },
+        primaryType: 'Order',
+        types: {
+            Order: [
+                { name: 'maker', type: 'address' },
+                { name: 'sellToken', type: 'address' },
+                { name: 'buyToken', type: 'address' },
+                { name: 'sellAmount', type: 'uint256' },
+                { name: 'buyAmount', type: 'uint256' },
+                { name: 'nonce', type: 'uint256' },
+                { name: 'expiry', type: 'uint256' },
+            ],
+        },
+        message: {
+            ...response,
+            nonce: 1n,
+            expiry: BigInt(Math.floor(Date.now() / 1000) + 60),
+        },
+    });
+    */
+
+    return {
+        ...response,
+        status: 'OK',
+        message: 'Quote fetched from 0x'
     };
   }
 }
