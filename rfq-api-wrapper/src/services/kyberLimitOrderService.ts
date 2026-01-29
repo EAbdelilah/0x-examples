@@ -71,7 +71,6 @@ export class KyberLimitOrderService {
     });
 
     // 2. Post to KyberSwap API
-    /*
     try {
       const response = await axios.post(`${this.baseUrl}/${params.chainId}/orders`, {
         order: {
@@ -83,17 +82,18 @@ export class KyberLimitOrderService {
         },
         signature,
       });
+      logger.info('Successfully posted order to KyberSwap');
       return response.data;
     } catch (error: any) {
-      logger.error('Error posting to KyberSwap Limit Order API:', error.response?.data || error.message);
-      throw error;
+      // If the API is not reachable or returns an error, we still return the signed order
+      // so the user can debug or post it manually.
+      logger.warn('Failed to post to KyberSwap API, but order was signed.', error.response?.data || error.message);
+      return {
+        order,
+        signature,
+        status: 'SIGNED_ONLY',
+        error: error.response?.data || error.message,
+      };
     }
-    */
-
-    return {
-      order,
-      signature,
-      message: 'Order created and signed locally. Post to KyberSwap API to activate.',
-    };
   }
 }
