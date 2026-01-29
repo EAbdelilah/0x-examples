@@ -1,0 +1,21 @@
+{
+  "name": "rfq-api-wrapper",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/express": "^5.0.6",
+    "@types/qs": "^6.14.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "axios": "^1.13.4",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "qs": "^6.14.1",
+    "viem": "^2.45.0"
+  }
+}
