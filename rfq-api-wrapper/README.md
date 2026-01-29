@@ -66,13 +66,19 @@ bun run test
 2. **0x Quote**: The adapter translates the request and calls the 0x Swap API v2 `/permit2/price` to get a competitive price.
 3. **PMM Response**: The adapter formats the 0x response into the specific format expected by the aggregator and returns it.
 
-## Applying as a Market Maker
+## Permissioning & Whitelisting
 
-To use this script in production, you must apply to be whitelisted by the respective aggregators:
+Most major DEX aggregators use a **permissioned** RFQ system to ensure quote reliability and prevent griefing. You cannot simply run this script and expect to receive traffic immediately; you must be whitelisted.
 
-- **1inch**: Join the [1inch Network](https://1inch.io/) and contact their team for PMM whitelisting.
-- **ParaSwap**: Fill out the [ParaSwap PMM Application](https://doc.paraswap.network/liquidity-providers/rfq-market-makers-pmm).
-- **Enso**: Contact the Enso team via their [Discord/Docs](https://docs.enso.finance/).
+| Aggregator | Type | How to Join |
+| --- | --- | --- |
+| **1inch** | Permissioned | Join the [1inch Network](https://1inch.io/) and apply for PMM whitelisting. |
+| **ParaSwap** | Permissioned | Fill out the [ParaSwap PMM Application](https://doc.paraswap.network/liquidity-providers/rfq-market-makers-pmm). |
+| **Enso** | Semi-Permissionless | Enso is an intent engine. While you can contribute permissionless "Action Abstractions," PMM/RFQ integration usually requires coordination. [Contact Enso](https://docs.enso.finance/). |
+| **KyberSwap** | Permissioned | Contact the Kyber team to list your "Reserve." |
+| **OpenOcean** | Permissioned | Contact OpenOcean support for RFQ/PMM onboarding. |
+
+**Note on Permissionless Liquidity**: If you want to provide liquidity **permissionlessly** (without whitelisting), you should consider providing liquidity to an AMM (like Uniswap V3) or using the **0x Mesh** (though 0x RFQ itself is also typically permissioned for takers).
 
 ## Production Considerations
 
