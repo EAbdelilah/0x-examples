@@ -44,11 +44,17 @@ export class KyberLimitOrderService {
       expiry: BigInt(expiry),
     };
 
+    const KYBER_LO_CONTRACTS: Record<number, string> = {
+      1: '0x3965947e4513e0e2c846a366657c66f7a8b7042f', // Example
+      42161: '0x227B0c196eA8db17A665EA6824D972A64202E936', // Arbitrum
+      8453: '0x3965947e4513e0e2c846a366657c66f7a8b7042f', // Example for Base
+    };
+
     const domain = {
       name: 'KyberSwap Limit Order',
       version: '1',
       chainId: params.chainId,
-      verifyingContract: '0x3965947e4513e0e2c846a366657c66f7a8b7042f' as Hex, // Placeholder for Kyber LO contract
+      verifyingContract: (KYBER_LO_CONTRACTS[params.chainId] || '0x3965947e4513e0e2c846a366657c66f7a8b7042f') as Hex,
     };
 
     const types = {

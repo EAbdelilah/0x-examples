@@ -44,6 +44,14 @@ cp .env.example .env
 | `PORT` | Port for the express server (default: 3000). |
 | `MM_ADDRESS` | The address associated with your private key. |
 
+### Verification (Do this first!)
+
+Before running the bots, verify your setup:
+
+```bash
+bun run verify
+```
+
 ### Running the Server
 
 ```bash
@@ -52,6 +60,16 @@ bun run dev
 
 # Production mode
 bun run start
+```
+
+### Running Bots
+
+```bash
+# Run the KyberSwap Maker Bot
+bun run maker
+
+# Run the UniswapX Filler Bot
+bun run filler
 ```
 
 ### Running Tests

@@ -35,6 +35,14 @@ export class FillerService {
   }
 
   private async evaluateAndFill(order: any, chainId: number) {
+    const UNISWAPX_REACTORS: Record<number, string> = {
+        1: '0x00000011F84B9aa48e5f8aA8B9897600006289Be', // V2 Dutch Order Reactor
+        8453: '0x000000001Ec5656dcdB24D90DFa42742738De729', // Priority Order Reactor
+    };
+
+    const reactor = UNISWAPX_REACTORS[chainId];
+    if (!reactor) return;
+
     const { encodedOrder, orderStatus } = order;
 
     // Simplified evaluation logic
@@ -75,9 +83,23 @@ export class FillerService {
 
   private executeFill(order: any) {
     // Logic to sign and send transaction to UniswapX Reactor
-    logger.info('Executing fill on-chain... [Transaction Logic Placeholder]');
-    // In production, you would use viem to call:
-    // reactor.write.execute([order.encodedOrder, signature])
+    logger.info(`Executing fill for order ${order.orderHash} on-chain...`);
+
+    /**
+     * IN PRODUCTION:
+     * 1. Decode the encodedOrder to ensure it hasn't changed.
+     * 2. Construct the transaction for the Reactor contract.
+     * 3. Submit using your filler's wallet.
+     *
+     * Example with viem:
+     * await walletClient.writeContract({
+     *   address: reactorAddress,
+     *   abi: reactorAbi,
+     *   functionName: 'execute',
+     *   args: [order.encodedOrder, order.signature]
+     * });
+     */
+    logger.warn('On-chain execution requires a funded wallet and Reactor contract ABI.');
   }
 
   /**
