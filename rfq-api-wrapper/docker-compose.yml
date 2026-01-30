@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  rfq-api:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file: .env
+    restart: always
+    command: ["bun", "run", "start"]
+
+  maker-bot:
+    build: .
+    env_file: .env
+    restart: always
+    command: ["bun", "run", "maker"]
+
+  filler-bot:
+    build: .
+    env_file: .env
+    restart: always
+    command: ["bun", "run", "filler"]
