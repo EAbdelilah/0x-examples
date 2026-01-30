@@ -68,7 +68,25 @@ To maximize revenue, you should prioritize chains where **on-chain liquidity is 
 *   **Mainnet**: Too expensive (gas).
 *   **Arbitrum**: Too competitive. Elite MMs are already providing extremely tight liquidity here.
 
-## 7. How to Level Up
+## 7. Chain Opportunity Matrix (The "Illiquidity" Play)
+
+To have your order "pass" (win the quote), you need to find chains with a high **Volume-to-Liquidity Ratio**. On these chains, AMMs have shallow pools, meaning even a $1,000 trade causes high slippage. Your 0x quote will easily beat them.
+
+| Priority | Chain | TVL (Liquidity) | Volume | PMM Opportunity (Alpha) |
+| --- | --- | --- | --- | --- |
+| **High** | **Base** | Medium | **High** | ⭐⭐⭐⭐⭐ (The best balance) |
+| **High** | **Linea** | Low | **High** | ⭐⭐⭐⭐⭐ (Massive flow from MetaMask) |
+| **High** | **Mantle** | Low/Medium | Medium | ⭐⭐⭐⭐ (Fragmented pools) |
+| **Medium** | **Scroll** | Low | Low/Medium | ⭐⭐⭐ (Good for niche pairs) |
+| **Medium** | **Blast** | Medium | Medium | ⭐⭐⭐ (Native yield focus) |
+| **Medium** | **Mode** | Very Low | Low | ⭐⭐⭐ (Almost no PMM competition) |
+| **Low** | **Arbitrum** | **Huge** | **Huge** | ⭐ (Too much AMM depth) |
+| **Avoid** | **Mainnet** | **Extreme** | **Extreme** | ❌ (Gas & Deep liquidity) |
+
+### **Why Linea is a Secret Weapon**
+Linea is developed by Consensys (the team behind MetaMask). Much of Linea's volume comes from the **MetaMask Swap** button. These users are often "lazy" (they just want the trade to work) and don't check slippage carefully. Because Linea's on-chain pools are relatively shallow, your PMM quotes will win a huge percentage of MetaMask's RFQ flow.
+
+## 8. How to Level Up
 1.  **Upgrade 0x Tier**: As your volume grows, 0x will reduce your fees. This allows you to lower your `SPREAD_BPS` and win even more trades.
 2.  **Inventory Management**: Instead of just using 0x, eventually hold your own "Inventory" (e.g., hold 10 ETH and 20,000 USDC). Quoting from your own wallet is **15 bps cheaper** than quoting from 0x.
 
