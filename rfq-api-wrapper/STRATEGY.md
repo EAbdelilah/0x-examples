@@ -32,7 +32,23 @@ In RFQ, you are sometimes "picked off" by sophisticated bots (Arbitrageurs) who 
     *   Keep your `expiry` short (the adapters I built use 60-120 seconds).
     *   Increase your spread during high volatility (e.g., during major news events).
 
-## 5. How to Level Up
+## 5. Who Pays Gas?
+
+This is a critical part of your revenue calculation.
+
+### **Phase 1: RFQ & Limit Orders (Standard)**
+*   **Who Pays**: The **User (Taker)**.
+*   **Mechanic**: You provide a **signed quote off-chain**. This consumes **ZERO GAS**.
+*   **When Gas is Used**: Only when the user decides your price is the best and submits the trade to the blockchain. The gas fee is subtracted from the user's wallet, not yours.
+*   **Why this is good**: You can provide 1,000,000 quotes a day and pay $0 in gas.
+
+### **Phase 2: The "Filler" Strategy (Arbitrage)**
+*   **Who Pays**: **You (The Maker/Filler)**.
+*   **Mechanic**: In UniswapX or CoW Swap, you are "filling" the user's order. You must submit the transaction to the blockchain.
+*   **Requirement**: Your 0x profit must be greater than the gas fee you pay to settle the trade.
+*   **Implementation**: This is why the `filler.ts` logic is "Advanced"—it requires a funded wallet to pay for gas.
+
+## 6. How to Level Up
 1.  **Upgrade 0x Tier**: As your volume grows, 0x will reduce your fees. This allows you to lower your `SPREAD_BPS` and win even more trades.
 2.  **Inventory Management**: Instead of just using 0x, eventually hold your own "Inventory" (e.g., hold 10 ETH and 20,000 USDC). Quoting from your own wallet is **15 bps cheaper** than quoting from 0x.
 
