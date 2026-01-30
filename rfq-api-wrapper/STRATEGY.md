@@ -48,7 +48,27 @@ This is a critical part of your revenue calculation.
 *   **Requirement**: Your 0x profit must be greater than the gas fee you pay to settle the trade.
 *   **Implementation**: This is why the `filler.ts` logic is "Advanced"—it requires a funded wallet to pay for gas.
 
-## 6. How to Level Up
+## 6. Targeting Liquidity Gaps (Chain Priority)
+
+To maximize revenue, you should prioritize chains where **on-chain liquidity is thin** but **trading volume is growing**. In these gaps, your 0x-sourced prices will easily beat AMMs (which suffer from high slippage).
+
+### **Priority 1: Base (High Volume, Fragmented Liquidity)**
+*   **Why**: Base is currently the fastest-growing L2. Many retail users from Coinbase are trading new or mid-cap tokens. Local AMMs (like Aerodrome) are strong but can't cover every pair deeply.
+*   **Edge**: You can often beat the AMM on trades over $5,000.
+
+### **Priority 2: Mantle / Linea / Scroll (The "Growth" L2s)**
+*   **Why**: These chains have massive incentive programs but their native DEXs are still catching up to the depth of Uniswap/Mainnet.
+*   **Edge**: There is less competition from "Big" Market Makers (who stay on Mainnet/Arbitrum). You can set a higher spread (e.g., `SPREAD_BPS=50`) and still win quotes because AMM slippage on these chains is often >1%.
+
+### **Priority 3: Blast (The Incentive Engine)**
+*   **Why**: Blast's native yield and points system attract a lot of speculative volume.
+*   **Edge**: Users are less price-sensitive and more focused on getting trades executed quickly for points.
+
+### **Chains to Avoid Initially: Ethereum Mainnet & Arbitrum**
+*   **Mainnet**: Too expensive (gas).
+*   **Arbitrum**: Too competitive. Elite MMs are already providing extremely tight liquidity here.
+
+## 7. How to Level Up
 1.  **Upgrade 0x Tier**: As your volume grows, 0x will reduce your fees. This allows you to lower your `SPREAD_BPS` and win even more trades.
 2.  **Inventory Management**: Instead of just using 0x, eventually hold your own "Inventory" (e.g., hold 10 ETH and 20,000 USDC). Quoting from your own wallet is **15 bps cheaper** than quoting from 0x.
 
