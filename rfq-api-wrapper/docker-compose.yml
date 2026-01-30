@@ -14,3 +14,9 @@ services:
     env_file: .env
     restart: always
     command: ["bun", "run", "maker"]
+
+  filler-bot:
+    build: .
+    env_file: .env
+    restart: always
+    command: ["bun", "run", "filler"]

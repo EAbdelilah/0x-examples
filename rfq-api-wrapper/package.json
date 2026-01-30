@@ -7,6 +7,7 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "maker": "bun run src/maker.ts",
+    "filler": "bun run src/filler.ts",
     "dev": "bun --watch src/index.ts",
     "test": "vitest",
     "lint": "tsc --noEmit"
