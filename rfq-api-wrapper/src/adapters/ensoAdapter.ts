@@ -35,9 +35,11 @@ export class EnsoAdapter extends BaseAdapter {
       chainId: validated.chainId,
     });
 
+    const amountWithSpread = this.applySpread(zeroExPrice.buyAmount);
+
     return {
-      amountOut: zeroExPrice.buyAmount,
-      price: zeroExPrice.buyAmount, // Simplified
+      amountOut: amountWithSpread,
+      price: amountWithSpread, // Simplified
     };
   }
 }

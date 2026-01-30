@@ -43,6 +43,22 @@ cp .env.example .env
 | `RPC_URL` | RPC URL for the chain you are providing liquidity on. |
 | `PORT` | Port for the express server (default: 3000). |
 | `MM_ADDRESS` | The address associated with your private key. |
+| `SPREAD_BPS` | Your profit margin in Basis Points (100 bps = 1%). Default: 50. |
+
+## How You Make Money (The Spread)
+
+This wrapper generates revenue through a **spread** (a fee).
+
+1. **The Request**: A user wants to swap 1 ETH for USDC.
+2. **0x Quote**: Your adapter pings 0x. 0x says it can give you **2000 USDC** for 1 ETH.
+3. **Apply Spread**: With `SPREAD_BPS=50` (0.5%), the adapter subtracts 10 USDC (0.5% of 2000).
+4. **The Response**: You quote the user **1990 USDC**.
+5. **The Profit**: If the user accepts, you swap their 1 ETH at 0x for 2000 USDC, give the user 1990 USDC, and **keep 10 USDC** as profit.
+
+### Optimizing Your Spread
+- **High Volume**: Set `SPREAD_BPS=10` to `20`. You will win more quotes but make less per trade.
+- **High Margin**: Set `SPREAD_BPS=50` to `100`. You will win fewer quotes but make more per trade.
+- **Tip**: Aggregators like 1inch and ParaSwap will only route to you if your price (after your fee) is better than the AMM (Uniswap, etc.).
 
 ### Verification (Do this first!)
 

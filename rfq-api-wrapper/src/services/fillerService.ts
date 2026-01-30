@@ -65,11 +65,13 @@ export class FillerService {
 
       const currentAuctionOutput = BigInt(order.currentOutputs[0].amount);
       const zeroExOutput = BigInt(zeroExPrice.buyAmount);
+      const spreadBps = Number(process.env.SPREAD_BPS || '0');
 
-      // 3. Profitability check: zeroExOutput - currentAuctionOutput > GasCost
-      // For this example, we'll assume a fixed gas cost or just check if 0x is better.
-      if (zeroExOutput > currentAuctionOutput) {
-        logger.info(`Profitable opportunity found! 0x: ${zeroExOutput}, UniswapX: ${currentAuctionOutput}`);
+      // 3. Profitability check: zeroExOutput > currentAuctionOutput + (Required Margin)
+      const requiredOutput = (currentAuctionOutput * BigInt(10000 + spreadBps)) / 10000n;
+
+      if (zeroExOutput > requiredOutput) {
+        logger.info(`Profitable opportunity found! 0x: ${zeroExOutput}, UniswapX Minimum: ${requiredOutput} (incl. ${spreadBps} bps spread)`);
 
         // 4. Submit filler transaction to the UniswapX Reactor contract
         // This requires the Filler's private key and calling the Reactor contract.

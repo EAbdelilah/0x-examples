@@ -28,9 +28,11 @@ export class OpenOceanAdapter extends BaseAdapter {
       chainId: validated.chainId,
     });
 
+    const amountWithSpread = this.applySpread(zeroExPrice.buyAmount);
+
     return {
-      outAmount: zeroExPrice.buyAmount,
-      price: zeroExPrice.buyAmount,
+      outAmount: amountWithSpread,
+      price: amountWithSpread,
     };
   }
 }

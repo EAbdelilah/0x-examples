@@ -41,10 +41,11 @@ export class ParaSwapAdapter extends BaseAdapter {
     }
 
     const zeroExPrice = await this.zeroExService.getPrice(params);
+    const buyAmountWithSpread = this.applySpread(zeroExPrice.buyAmount);
 
     const response: any = {
-      price: zeroExPrice.buyAmount,
-      guaranteedPrice: zeroExPrice.minBuyAmount || zeroExPrice.buyAmount,
+      price: buyAmountWithSpread,
+      guaranteedPrice: buyAmountWithSpread,
       address: this.account.address,
       // Optional: specify limits for this pair
       minAmount: '1',
@@ -80,7 +81,7 @@ export class ParaSwapAdapter extends BaseAdapter {
             from: validated.from as Hex,
             to: validated.to as Hex,
             amount: BigInt(validated.amount),
-            price: BigInt(zeroExPrice.buyAmount),
+            price: BigInt(buyAmountWithSpread),
             salt: BigInt(randomValues[0]),
             expiry: BigInt(Math.floor(Date.now() / 1000) + 60), // 60 seconds
         };

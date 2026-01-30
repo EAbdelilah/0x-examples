@@ -48,10 +48,13 @@ export class OneInchAdapter extends BaseAdapter {
       chainId: validated.chainId,
     });
 
+    // Apply Spread
+    const buyAmountWithSpread = this.applySpread(zeroExPrice.buyAmount);
+
     // 1inch Limit Order V4 Logic
     const makerAsset = toToken;
     const takerAsset = fromToken;
-    const makingAmount = BigInt(zeroExPrice.buyAmount);
+    const makingAmount = BigInt(buyAmountWithSpread);
     const takingAmount = BigInt(validated.amount);
 
     // Create a salt with expiration (standard for 1inch RFQ)
@@ -113,6 +116,10 @@ export class OneInchAdapter extends BaseAdapter {
         makingAmount: order.makingAmount.toString(),
         takingAmount: order.takingAmount.toString(),
       },
+      _meta: {
+        zeroExPrice: zeroExPrice.buyAmount,
+        spreadBps: this.spreadBps,
+      }
     };
   }
 

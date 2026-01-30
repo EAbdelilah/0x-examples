@@ -19,7 +19,8 @@ export class KyberLimitOrderService {
     chainId: number;
     expiry?: number;
   }) {
-    logger.info(`Creating KyberSwap Limit Order: ${params.makerAsset} -> ${params.takerAsset}`);
+    const spreadBps = Number(process.env.SPREAD_BPS || '0');
+    logger.info(`Creating KyberSwap Limit Order: ${params.makerAsset} -> ${params.takerAsset} with ${spreadBps} bps spread`);
 
     // 1. Fetch 0x Price to determine how much we want in return (takerAmount)
     const zeroExPrice = await this.zeroExService.getPrice({
@@ -30,7 +31,9 @@ export class KyberLimitOrderService {
       chainId: params.chainId,
     });
 
-    const takerAmount = BigInt(zeroExPrice.buyAmount);
+    // Apply Spread: takerAmount = zeroExBuyAmount * (10000 - spreadBps) / 10000
+    const takerAmount = (BigInt(zeroExPrice.buyAmount) * BigInt(10000 - spreadBps)) / 10000n;
+
     const expiry = params.expiry || Math.floor(Date.now() / 1000) + 3600; // 1 hour
     const salt = BigInt(Math.floor(Math.random() * 1000000000));
 
