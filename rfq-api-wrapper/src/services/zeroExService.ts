@@ -41,6 +41,8 @@ export class ZeroExService {
       130: 'unichain.',
       57073: 'ink.',
       2741: 'abstract.',
+      10117: 'monadtestnet.',
+      10143: 'monad.',
       11155111: 'sepolia.',
     };
     const prefix = chainMap[chainId] ?? '';
