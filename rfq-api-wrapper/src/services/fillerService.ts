@@ -36,8 +36,10 @@ export class FillerService {
 
   private async evaluateAndFill(order: any, chainId: number) {
     const UNISWAPX_REACTORS: Record<number, string> = {
-        1: '0x00000011F84B9aa48e5f8aA8B9897600006289Be', // V2 Dutch Order Reactor
-        8453: '0x000000001Ec5656dcdB24D90DFa42742738De729', // Priority Order Reactor
+        1: '0x00000011F84B9aa48e5f8aA8B9897600006289Be', // Mainnet V2 Dutch Order Reactor
+        8453: '0x000000001Ec5656dcdB24D90DFa42742738De729', // Base Priority Order Reactor
+        42161: '0xB274d5F4b833b61B340b654d600A864fB604a87c', // Arbitrum DutchV3OrderReactor
+        130: '0x00000006021a6Bce796be7ba509BBBA71e956e37', // Unichain PriorityOrderReactor (Likely)
     };
 
     const reactor = UNISWAPX_REACTORS[chainId];

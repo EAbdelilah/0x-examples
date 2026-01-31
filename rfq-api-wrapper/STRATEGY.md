@@ -83,10 +83,27 @@ To have your order "pass" (win the quote), you need to find chains with a high *
 | **Low** | **Arbitrum** | **Huge** | **Huge** | ⭐ (Too much AMM depth) |
 | **Avoid** | **Mainnet** | **Extreme** | **Extreme** | ❌ (Gas & Deep liquidity) |
 
+## 8. The "Frontier Play" (New & Upcoming Chains)
+
+Based on the latest ecosystem growth, there is a new category of **"Ultra High Alpha"** chains. These are chains that are either brand new (Mainnet just launched) or in Testnet.
+
+| Alpha Level | Chain | Why it's a Goldmine |
+| --- | --- | --- |
+| 💎💎💎 | **Berachain** | Massive hype and a unique "Proof of Liquidity" model. Initial liquidity will be extremely fragmented. |
+| 💎💎💎 | **Monad** | Ultra-high performance. Early adopters will trade heavily, but AMM depth will take months to build. |
+| 💎💎 | **Abstract / Ink** | Backed by huge players (ZKSync/Kraken). These will have instant volume but shallow "native" pools. |
+| 💎💎 | **Unichain** | Uniswap's own chain. While it will have deep liquidity eventually, the first few weeks are a PMM's paradise. |
+| 💎 | **Sonic / Worldchain** | Fast growth with highly incentivized volume. |
+
+### **The Strategy for Frontier Chains**
+1.  **Be First**: Set up your 0x adapter for these chains on **Day 1** of their Mainnet launch.
+2.  **Higher Spreads**: On these chains, you can often set `SPREAD_BPS=100` (1%) and still win, because the alternate routes (AMMs) have 2-5% slippage due to zero liquidity.
+3.  **Test on Testnets**: Use **MonadTestnet** or **Ink Testnet** now to ensure your bot handles the chain's latency perfectly before the real money starts flowing.
+
 ### **Why Linea is a Secret Weapon**
 Linea is developed by Consensys (the team behind MetaMask). Much of Linea's volume comes from the **MetaMask Swap** button. These users are often "lazy" (they just want the trade to work) and don't check slippage carefully. Because Linea's on-chain pools are relatively shallow, your PMM quotes will win a huge percentage of MetaMask's RFQ flow.
 
-## 8. How to Level Up
+## 9. How to Level Up
 1.  **Upgrade 0x Tier**: As your volume grows, 0x will reduce your fees. This allows you to lower your `SPREAD_BPS` and win even more trades.
 2.  **Inventory Management**: Instead of just using 0x, eventually hold your own "Inventory" (e.g., hold 10 ETH and 20,000 USDC). Quoting from your own wallet is **15 bps cheaper** than quoting from 0x.
 

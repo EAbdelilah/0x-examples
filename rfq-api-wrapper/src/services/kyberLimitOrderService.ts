@@ -48,9 +48,12 @@ export class KyberLimitOrderService {
     };
 
     const KYBER_LO_CONTRACTS: Record<number, string> = {
-      1: '0x3965947e4513e0e2c846a366657c66f7a8b7042f', // Example
+      1: '0x3965947e4513e0e2c846a366657c66f7a8b7042f', // Ethereum Mainnet
       42161: '0x227B0c196eA8db17A665EA6824D972A64202E936', // Arbitrum
-      8453: '0x3965947e4513e0e2c846a366657c66f7a8b7042f', // Example for Base
+      8453: '0x3965947e4513e0e2c846a366657c66f7a8b7042f', // Base
+      137: '0x3965947e4513e0e2c846a366657c66f7a8b7042f', // Polygon
+      56: '0x3965947e4513e0e2c846a366657c66f7a8b7042f', // BSC
+      10: '0x3965947e4513e0e2c846a366657c66f7a8b7042f', // Optimism
     };
 
     const domain = {
