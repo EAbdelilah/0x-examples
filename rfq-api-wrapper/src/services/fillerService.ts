@@ -6,7 +6,7 @@ import { Hex } from 'viem';
 export class FillerService {
   private readonly UNISWAPX_API = 'https://api.uniswap.org/v2/orders';
 
-  constructor(private zeroExService: ZeroExService) {}
+  constructor(private zeroExService: ZeroExService) { }
 
   /**
    * Functional logic for a UniswapX Filler
@@ -36,8 +36,8 @@ export class FillerService {
 
   private async evaluateAndFill(order: any, chainId: number) {
     const UNISWAPX_REACTORS: Record<number, string> = {
-        1: '0x00000011F84B9aa48e5f8aA8B9897600006289Be', // V2 Dutch Order Reactor
-        8453: '0x000000001Ec5656dcdB24D90DFa42742738De729', // Priority Order Reactor
+      1: '0x00000011F84B9aa48e5f8aA8B9897600006289Be', // V2 Dutch Order Reactor
+      8453: '0x000000001Ec5656dcdB24D90DFa42742738De729', // Priority Order Reactor
     };
 
     const reactor = UNISWAPX_REACTORS[chainId];
@@ -45,13 +45,22 @@ export class FillerService {
 
     const { encodedOrder, orderStatus } = order;
 
-    // Simplified evaluation logic
-    // In a real filler, you would decode the EIP-712 order to get tokens and amounts
-    // and calculate the current price based on the Dutch Auction decay.
+    // Fix: Map UniswapX API V2 structure correctly
+    const sellToken = order.input?.token;
+    const sellAmount = order.input?.amount;
+    const buyToken = order.outputs?.[0]?.token;
+    const buyAmount = order.outputs?.[0]?.amount;
 
-    const sellToken = order.sellToken;
-    const buyToken = order.buyToken;
-    const sellAmount = order.sellAmount; // Amount user is selling
+    if (!sellToken || !buyToken || !sellAmount || !buyAmount) {
+      logger.warn(`[Filler] Invalid order structure. Missing tokens or amounts. Order Hash: ${order.orderHash}`);
+      return;
+    }
+
+    // Skip zero-address tokens (Native ETH or malformed)
+    if (sellToken === '0x0000000000000000000000000000000000000000' || buyToken === '0x0000000000000000000000000000000000000000') {
+      logger.debug(`[Filler] Skipping order with zero-address token. Hash: ${order.orderHash}`);
+      return;
+    }
 
     try {
       // 2. Fetch 0x quote to see if we can cover this order
@@ -59,11 +68,11 @@ export class FillerService {
         sellToken,
         buyToken,
         sellAmount,
-        taker: '0x0000000000000000000000000000000000000000', // We are the filler
         chainId,
       });
 
-      const currentAuctionOutput = BigInt(order.currentOutputs[0].amount);
+      // The amount the user wants to receive (minimum output)
+      const currentAuctionOutput = BigInt(buyAmount);
       const zeroExOutput = BigInt(zeroExPrice.buyAmount);
       const spreadBps = Number(process.env.SPREAD_BPS || '0');
 

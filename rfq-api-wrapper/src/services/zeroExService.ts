@@ -8,7 +8,7 @@ export interface ZeroExPriceParams {
   buyToken: string;
   sellAmount?: string;
   buyAmount?: string;
-  taker: string;
+  taker?: string;
   chainId: number;
 }
 
@@ -20,18 +20,7 @@ export class ZeroExService {
   }
 
   private getBaseUrl(chainId: number): string {
-    const chainMap: Record<number, string> = {
-      1: '',
-      10: 'optimism.',
-      56: 'bsc.',
-      137: 'polygon.',
-      8453: 'base.',
-      42161: 'arbitrum.',
-      43114: 'avalanche.',
-      11155111: 'sepolia.',
-    };
-    const prefix = chainMap[chainId] ?? '';
-    return `https://${prefix}api.0x.org/swap/permit2`;
+    return 'https://api.0x.org/swap/permit2';
   }
 
   async getPrice(params: ZeroExPriceParams) {

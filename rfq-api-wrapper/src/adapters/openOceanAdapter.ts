@@ -24,7 +24,7 @@ export class OpenOceanAdapter extends BaseAdapter {
       sellToken: validated.inTokenAddress,
       buyToken: validated.outTokenAddress,
       sellAmount: validated.amount,
-      taker: validated.account || '0x0000000000000000000000000000000000000000',
+      taker: validated.account,
       chainId: validated.chainId,
     });
 

@@ -18,7 +18,7 @@ async function tick() {
     await fillerService.monitorUniswapX(8453);
 
     // You can add more chains here
-    // await fillerService.monitorUniswapX(1);
+    // await fillerService.monitorUniswapX(130);
   } catch (error) {
     logger.error('Failed to run filler tick:', error);
   }
@@ -35,6 +35,6 @@ async function main() {
 }
 
 main().catch(err => {
-    logger.error('Critical filler bot error:', err);
-    process.exit(1);
+  logger.error('Critical filler bot error:', err);
+  process.exit(1);
 });

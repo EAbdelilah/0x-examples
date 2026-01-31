@@ -31,7 +31,7 @@ export class EnsoAdapter extends BaseAdapter {
       sellToken: validated.fromToken,
       buyToken: validated.toToken,
       sellAmount: validated.amount,
-      taker: validated.fromAddress || '0x0000000000000000000000000000000000000000',
+      taker: validated.fromAddress,
       chainId: validated.chainId,
     });
 

@@ -33,74 +33,50 @@ export class KyberLimitOrderService {
 
     // Apply Spread: takerAmount = zeroExBuyAmount * (10000 - spreadBps) / 10000
     const takerAmount = (BigInt(zeroExPrice.buyAmount) * BigInt(10000 - spreadBps)) / 10000n;
+    const expiry = params.expiry || Math.floor(Date.now() / 1000) + 3600;
 
-    const expiry = params.expiry || Math.floor(Date.now() / 1000) + 3600; // 1 hour
-    const salt = BigInt(Math.floor(Math.random() * 1000000000));
-
-    const order = {
+    // 2. Prepare Payload for /sign-message
+    const signPayload = {
+      chainId: params.chainId.toString(),
       maker: this.account.address,
-      takerAsset: params.takerAsset as Hex,
-      makerAsset: params.makerAsset as Hex,
-      takerAmount,
-      makerAmount: BigInt(params.makerAmount),
-      salt,
-      expiry: BigInt(expiry),
+      makerAsset: params.makerAsset,
+      takerAsset: params.takerAsset,
+      makingAmount: params.makerAmount,
+      takingAmount: takerAmount.toString(),
+      expiredAt: Number(expiry)
     };
 
-    const KYBER_LO_CONTRACTS: Record<number, string> = {
-      1: '0x3965947e4513e0e2c846a366657c66f7a8b7042f', // Example
-      42161: '0x227B0c196eA8db17A665EA6824D972A64202E936', // Arbitrum
-      8453: '0x3965947e4513e0e2c846a366657c66f7a8b7042f', // Example for Base
-    };
-
-    const domain = {
-      name: 'KyberSwap Limit Order',
-      version: '1',
-      chainId: params.chainId,
-      verifyingContract: (KYBER_LO_CONTRACTS[params.chainId] || '0x3965947e4513e0e2c846a366657c66f7a8b7042f') as Hex,
-    };
-
-    const types = {
-      Order: [
-        { name: 'maker', type: 'address' },
-        { name: 'takerAsset', type: 'address' },
-        { name: 'makerAsset', type: 'address' },
-        { name: 'takerAmount', type: 'uint256' },
-        { name: 'makerAmount', type: 'uint256' },
-        { name: 'salt', type: 'uint256' },
-        { name: 'expiry', type: 'uint256' },
-      ],
-    };
-
-    const signature = await this.account.signTypedData({
-      domain,
-      primaryType: 'Order',
-      types,
-      message: order,
-    });
-
-    // 2. Post to KyberSwap API
     try {
-      const response = await axios.post(`${this.baseUrl}/${params.chainId}/orders`, {
-        order: {
-            ...order,
-            takerAmount: takerAmount.toString(),
-            makerAmount: params.makerAmount,
-            salt: salt.toString(),
-            expiry: expiry.toString(),
-        },
-        signature,
+      // Step A: Get Typed Data to Sign
+      const signRes = await axios.post(`${this.baseUrl}/write/api/v1/orders/sign-message`, signPayload);
+      const { types, domain, message, primaryType } = signRes.data.data;
+
+      // Filter out EIP712Domain from types for Viem as it likely infers it from domain object
+      const { EIP712Domain, ...signingTypes } = types;
+
+      // Step B: Sign
+      const signature = await this.account.signTypedData({
+        domain,
+        types: signingTypes,
+        primaryType,
+        message,
       });
+
+      // Step C: Post Signed Order
+      const postPayload = {
+        chainId: params.chainId.toString(),
+        ...message,
+        expiredAt: Number(expiry),
+        signature,
+      };
+
+      const response = await axios.post(`${this.baseUrl}/write/api/v1/orders`, postPayload);
       logger.info('Successfully posted order to KyberSwap');
       return response.data;
     } catch (error: any) {
-      // If the API is not reachable or returns an error, we still return the signed order
-      // so the user can debug or post it manually.
-      logger.warn('Failed to post to KyberSwap API, but order was signed.', error.response?.data || error.message);
+      logger.warn('Failed to post to KyberSwap API', error.response?.data || error.message);
       return {
-        order,
-        signature,
-        status: 'SIGNED_ONLY',
+        status: 'FAILED',
         error: error.response?.data || error.message,
       };
     }

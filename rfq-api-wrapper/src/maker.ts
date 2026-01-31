@@ -40,6 +40,6 @@ async function main() {
 }
 
 main().catch(err => {
-    logger.error('Critical bot error:', err);
-    process.exit(1);
+  logger.error('Critical bot error:', err);
+  process.exit(1);
 });
