@@ -7,8 +7,8 @@ class TestAdapter extends BaseAdapter {
     }
     async handleQuote(req: any) { return {}; }
     // Expose protected method for testing
-    public testApplySpread(amount: string) {
-        return this.applySpread(amount);
+    public testApplySpread(amount: string, price: string = '1.0') {
+        return this.applySpread(amount, 'TEST-PAIR', price);
     }
 }
 
@@ -29,5 +29,18 @@ describe('Spread Logic', () => {
         process.env.SPREAD_BPS = '0';
         const adapter = new TestAdapter({} as any);
         expect(adapter.testApplySpread('1000')).toBe('1000');
+    });
+
+    it('should increase spread on high volatility', () => {
+        process.env.SPREAD_BPS = '50';
+        const adapter = new TestAdapter({} as any);
+
+        // First call sets the price
+        adapter.testApplySpread('1000', '1.0');
+
+        // Second call with 2% price change
+        // Original spread 50 + 50 surcharge = 100 bps (1%)
+        // 1000 - 1% = 990
+        expect(adapter.testApplySpread('1000', '1.02')).toBe('990');
     });
 });

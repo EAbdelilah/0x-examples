@@ -49,7 +49,7 @@ export class OneInchAdapter extends BaseAdapter {
     });
 
     // Apply Spread
-    const buyAmountWithSpread = this.applySpread(zeroExPrice.buyAmount);
+    const buyAmountWithSpread = this.applySpread(zeroExPrice.buyAmount, `${fromToken}-${toToken}`, zeroExPrice.price);
 
     // 1inch Limit Order V4 Logic
     const makerAsset = toToken;

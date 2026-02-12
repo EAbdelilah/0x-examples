@@ -2,7 +2,7 @@ import { BaseAdapter } from './baseAdapter';
 import { z } from 'zod';
 import { ZeroExService } from '../services/zeroExService';
 import logger from '../utils/logger';
-import { Hex, hashTypedData } from 'viem';
+import { Hex, hashTypedData, getAddress } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
 const ParaSwapPriceSchema = z.object({
@@ -14,6 +14,13 @@ const ParaSwapPriceSchema = z.object({
   userAddress: z.string().optional(),
   isFirmQuote: z.coerce.boolean().default(false),
 });
+
+// ParaSwap Augustus V6 addresses (examples)
+const PARASWAP_ROUTER: Record<number, string> = {
+  1: '0x6a000f20005980200222b0030099000b00000000',
+  137: '0x6a000f20005980200222b0030099000b00000000',
+  8453: '0x6a000f20005980200222b0030099000b00000000', // Base
+};
 
 export class ParaSwapAdapter extends BaseAdapter {
   private account;
@@ -41,26 +48,27 @@ export class ParaSwapAdapter extends BaseAdapter {
     }
 
     const zeroExPrice = await this.zeroExService.getPrice(params);
-    const buyAmountWithSpread = this.applySpread(zeroExPrice.buyAmount);
+    const buyAmountWithSpread = this.applySpread(zeroExPrice.buyAmount, `${validated.from}-${validated.to}`, zeroExPrice.price);
 
     const response: any = {
       price: buyAmountWithSpread,
       guaranteedPrice: buyAmountWithSpread,
       address: this.account.address,
-      // Optional: specify limits for this pair
       minAmount: '1',
       maxAmount: '1000000000000000000000000',
+      network: validated.network,
+      gasEstimate: this.estimateGas(validated.network),
     };
 
     if (validated.isFirmQuote) {
-        // Implement ParaSwap EIP-712 signing if needed
-        // This usually depends on the ParaSwap Augustus version being used
-        // For now, we return a signed message that represents the quote
+        const expiry = Math.floor(Date.now() / 1000) + 60; // 60 seconds
+        const salt = BigInt(Math.floor(Math.random() * 1000000000));
+
         const domain = {
             name: 'ParaSwap PMM',
             version: '1',
             chainId: validated.network,
-            verifyingContract: '0xdef171fe48cf0148b1a80588e8984849ef5d5744' as Hex, // Placeholder
+            verifyingContract: getAddress(PARASWAP_ROUTER[validated.network] || PARASWAP_ROUTER[1]) as Hex,
         };
 
         const types = {
@@ -74,16 +82,13 @@ export class ParaSwapAdapter extends BaseAdapter {
             ],
         };
 
-        const randomValues = new Uint32Array(1);
-        crypto.getRandomValues(randomValues);
-
         const message = {
             from: validated.from as Hex,
             to: validated.to as Hex,
             amount: BigInt(validated.amount),
             price: BigInt(buyAmountWithSpread),
-            salt: BigInt(randomValues[0]),
-            expiry: BigInt(Math.floor(Date.now() / 1000) + 60), // 60 seconds
+            salt,
+            expiry: BigInt(expiry),
         };
 
         const signature = await this.account.signTypedData({
@@ -94,7 +99,13 @@ export class ParaSwapAdapter extends BaseAdapter {
         });
 
         response.signature = signature;
-        response.order = message;
+        response.order = {
+            ...message,
+            salt: message.salt.toString(),
+            expiry: message.expiry.toString(),
+            amount: message.amount.toString(),
+            price: message.price.toString(),
+        };
     }
 
     return response;

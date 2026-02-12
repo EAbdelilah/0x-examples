@@ -72,7 +72,11 @@ export class KyberLimitOrderService {
 
       const response = await axios.post(`${this.baseUrl}/write/api/v1/orders`, postPayload);
       logger.info('Successfully posted order to KyberSwap');
-      return response.data;
+      return {
+        ...response.data,
+        order: message,
+        signature
+      };
     } catch (error: any) {
       logger.warn('Failed to post to KyberSwap API', error.response?.data || error.message);
       return {
