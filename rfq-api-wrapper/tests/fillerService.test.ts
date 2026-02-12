@@ -3,7 +3,18 @@ import axios from 'axios';
 import { FillerService } from '../src/services/fillerService';
 
 vi.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+const mockedAxios = axios as any;
+
+// Mock viem to avoid network calls
+vi.mock('viem', async () => {
+  const actual = await vi.importActual('viem');
+  return {
+    ...actual,
+    createPublicClient: vi.fn(() => ({
+      getGasPrice: vi.fn().mockResolvedValue(1000000000n),
+    })),
+  };
+});
 
 describe('FillerService', () => {
   let service: FillerService;
@@ -24,10 +35,14 @@ describe('FillerService', () => {
         orders: [
           {
             orderHash: '0xhash1',
-            sellToken: '0xuserSell',
-            buyToken: '0xuserBuy',
-            sellAmount: '100',
-            currentOutputs: [{ amount: '90' }], // User wants 90
+            input: {
+              token: '0xuserSell',
+              amount: '100'
+            },
+            outputs: [{
+              token: '0xuserBuy',
+              amount: '90'
+            }],
             encodedOrder: '0xencoded',
             signature: '0xsig'
           }
@@ -39,9 +54,6 @@ describe('FillerService', () => {
     mockZeroExService.getPrice.mockResolvedValue({
       buyAmount: '100'
     });
-
-    // We expect log or some action. Since executeFill just logs for now, we'll spy on logger.
-    // However, the test will verify the flow doesn't crash and mocks are called.
 
     await service.monitorUniswapX(1);
 

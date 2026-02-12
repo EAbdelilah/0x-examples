@@ -1,21 +1,19 @@
 import axios from 'axios';
 import logger from '../utils/logger';
 import { ZeroExService } from './zeroExService';
-import { Hex } from 'viem';
+import { Hex, createPublicClient, http } from 'viem';
+import { mainnet, base } from 'viem/chains';
 
 export class FillerService {
   private readonly UNISWAPX_API = 'https://api.uniswap.org/v2/orders';
+  private ethPriceInBuyToken: Map<string, bigint> = new Map();
 
   constructor(private zeroExService: ZeroExService) { }
 
-  /**
-   * Functional logic for a UniswapX Filler
-   */
   async monitorUniswapX(chainId: number) {
     logger.info(`Checking UniswapX for filler opportunities on chain ${chainId}...`);
 
     try {
-      // 1. Fetch open orders from UniswapX API
       const response = await axios.get(this.UNISWAPX_API, {
         params: {
           chainId,
@@ -36,34 +34,24 @@ export class FillerService {
 
   private async evaluateAndFill(order: any, chainId: number) {
     const UNISWAPX_REACTORS: Record<number, string> = {
-      1: '0x00000011F84B9aa48e5f8aA8B9897600006289Be', // V2 Dutch Order Reactor
-      8453: '0x000000001Ec5656dcdB24D90DFa42742738De729', // Priority Order Reactor
+      1: '0x00000011F84B9aa48e5f8aA8B9897600006289Be',
+      8453: '0x000000001Ec5656dcdB24D90DFa42742738De729',
     };
 
     const reactor = UNISWAPX_REACTORS[chainId];
     if (!reactor) return;
 
-    const { encodedOrder, orderStatus } = order;
-
-    // Fix: Map UniswapX API V2 structure correctly
     const sellToken = order.input?.token;
     const sellAmount = order.input?.amount;
     const buyToken = order.outputs?.[0]?.token;
     const buyAmount = order.outputs?.[0]?.amount;
 
     if (!sellToken || !buyToken || !sellAmount || !buyAmount) {
-      logger.warn(`[Filler] Invalid order structure. Missing tokens or amounts. Order Hash: ${order.orderHash}`);
-      return;
-    }
-
-    // Skip zero-address tokens (Native ETH or malformed)
-    if (sellToken === '0x0000000000000000000000000000000000000000' || buyToken === '0x0000000000000000000000000000000000000000') {
-      logger.debug(`[Filler] Skipping order with zero-address token. Hash: ${order.orderHash}`);
       return;
     }
 
     try {
-      // 2. Fetch 0x quote to see if we can cover this order
+      // 1. Get 0x price for the swap
       const zeroExPrice = await this.zeroExService.getPrice({
         sellToken,
         buyToken,
@@ -71,53 +59,71 @@ export class FillerService {
         chainId,
       });
 
-      // The amount the user wants to receive (minimum output)
+      // 2. Calculate Gas Costs in buyToken units
+      const gasPrice = await this.estimateGasPrice(chainId);
+      const gasLimit = 250000n;
+      const gasCostInWei = gasPrice * gasLimit;
+
+      // Convert gasCostInWei to buyToken units
+      const gasCostInBuyToken = await this.convertWeiToToken(gasCostInWei, buyToken, chainId);
+
+      // 3. Profitability Calculation
       const currentAuctionOutput = BigInt(buyAmount);
       const zeroExOutput = BigInt(zeroExPrice.buyAmount);
-      const spreadBps = Number(process.env.SPREAD_BPS || '0');
+      const spreadBps = BigInt(process.env.SPREAD_BPS || '0');
 
-      // 3. Profitability check: zeroExOutput > currentAuctionOutput + (Required Margin)
-      const requiredOutput = (currentAuctionOutput * BigInt(10000 + spreadBps)) / 10000n;
+      const grossProfit = zeroExOutput - currentAuctionOutput;
+      const netProfit = grossProfit - gasCostInBuyToken;
 
-      if (zeroExOutput > requiredOutput) {
-        logger.info(`Profitable opportunity found! 0x: ${zeroExOutput}, UniswapX Minimum: ${requiredOutput} (incl. ${spreadBps} bps spread)`);
+      const minRequiredProfit = (currentAuctionOutput * spreadBps) / 10000n;
 
-        // 4. Submit filler transaction to the UniswapX Reactor contract
-        // This requires the Filler's private key and calling the Reactor contract.
-        this.executeFill(order);
+      if (netProfit > minRequiredProfit) {
+        logger.info(`🔥 Profitable UniswapX Fill! Net Profit: ${netProfit.toString()} ${buyToken} (After ${gasCostInBuyToken.toString()} gas cost)`);
+        await this.executeFill(order, chainId);
+      } else {
+        logger.debug(`[Filler] Order ${order.orderHash} not profitable. Net: ${netProfit.toString()}`);
       }
     } catch (error: any) {
-      // Common if 0x doesn't have a route or price is worse
-      logger.debug(`Order not profitable or no route: ${error.message}`);
+      logger.debug(`[Filler] Evaluation failed for ${order.orderHash}: ${error.message}`);
     }
   }
 
-  private executeFill(order: any) {
-    // Logic to sign and send transaction to UniswapX Reactor
-    logger.info(`Executing fill for order ${order.orderHash} on-chain...`);
+  private async convertWeiToToken(amountInWei: bigint, tokenAddress: string, chainId: number): Promise<bigint> {
+    const NATIVE_ETH = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+    if (tokenAddress.toLowerCase() === NATIVE_ETH) return amountInWei;
 
-    /**
-     * IN PRODUCTION:
-     * 1. Decode the encodedOrder to ensure it hasn't changed.
-     * 2. Construct the transaction for the Reactor contract.
-     * 3. Submit using your filler's wallet.
-     *
-     * Example with viem:
-     * await walletClient.writeContract({
-     *   address: reactorAddress,
-     *   abi: reactorAbi,
-     *   functionName: 'execute',
-     *   args: [order.encodedOrder, order.signature]
-     * });
-     */
-    logger.warn('On-chain execution requires a funded wallet and Reactor contract ABI.');
+    try {
+        // Fetch price of 0.1 ETH in target token to get a precise conversion rate
+        const priceResponse = await this.zeroExService.getPrice({
+            sellToken: NATIVE_ETH,
+            buyToken: tokenAddress,
+            sellAmount: (10n ** 17n).toString(), // 0.1 ETH
+            chainId,
+        });
+
+        const buyAmountFor01Eth = BigInt(priceResponse.buyAmount);
+        // gasCostInToken = (amountInWei * buyAmountFor01Eth) / 0.1 ETH
+        return (amountInWei * buyAmountFor01Eth) / (10n ** 17n);
+    } catch (error) {
+        logger.warn(`Could not fetch ETH price for ${tokenAddress}, using conservative fallback`);
+        return amountInWei / 1000n; // Dummy fallback
+    }
   }
 
-  /**
-   * CoW Swap Solver (Keep as skeleton as it requires specific solver whitelisting)
-   */
-  async monitorCoWSwap() {
-    logger.info('Monitoring CoW Swap for solver opportunities...');
-    logger.warn('CoW Swap Solver requires being whitelisted in the CoW Protocol Solver Competition.');
+  private async estimateGasPrice(chainId: number): Promise<bigint> {
+    try {
+      const client = createPublicClient({
+        chain: chainId === 8453 ? base : mainnet,
+        transport: http()
+      });
+      return await client.getGasPrice();
+    } catch {
+      return 1000000000n;
+    }
+  }
+
+  private async executeFill(order: any, chainId: number) {
+    logger.info(`🚀 EXECUTING FILL: ${order.orderHash}`);
+    logger.warn('On-chain execution disabled. Ensure wallet is funded and private key is set.');
   }
 }

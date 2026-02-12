@@ -35,11 +35,17 @@ export class EnsoAdapter extends BaseAdapter {
       chainId: validated.chainId,
     });
 
-    const amountWithSpread = this.applySpread(zeroExPrice.buyAmount);
+    const amountWithSpread = this.applySpread(zeroExPrice.buyAmount, `${validated.fromToken}-${validated.toToken}`, zeroExPrice.price);
 
     return {
       amountOut: amountWithSpread,
-      price: amountWithSpread, // Simplified
+      price: amountWithSpread,
+      gas: this.estimateGas(validated.chainId),
+      // For Enso, we might return the 'action' to take
+      action: {
+        target: '0xdef1C0ded9bec7F1a1670819833240f027b25EfF', // 0x Proxy
+        callData: zeroExPrice.data, // If using /quote instead of /price
+      }
     };
   }
 }
