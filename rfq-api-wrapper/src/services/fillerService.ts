@@ -61,6 +61,14 @@ export class FillerService {
 
       // 2. Calculate Gas Costs in buyToken units
       const gasPrice = await this.estimateGasPrice(chainId);
+
+      // Safety: Skip if gas is too high (e.g., > 100 Gwei on Mainnet or > 0.1 Gwei on Base)
+      const maxGasPrice = chainId === 1 ? 100000000000n : 100000000n;
+      if (gasPrice > BigInt(maxGasPrice)) {
+        logger.warn(`[Filler] Gas price too high: ${gasPrice.toString()}. Skipping.`);
+        return;
+      }
+
       const gasLimit = 250000n;
       const gasCostInWei = gasPrice * gasLimit;
 
