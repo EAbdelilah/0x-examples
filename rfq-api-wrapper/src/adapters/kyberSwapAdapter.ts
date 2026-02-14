@@ -15,10 +15,12 @@ const KyberSwapQuoteSchema = z.object({
 
 export class KyberSwapAdapter extends BaseAdapter {
   private account;
+  private rfqContract: string;
 
-  constructor(zeroExService: ZeroExService, privateKey: string) {
+  constructor(zeroExService: ZeroExService, privateKey: string, rfqContract?: string) {
     super('KyberSwap', zeroExService);
     this.account = privateKeyToAccount(`0x${privateKey.replace('0x', '')}` as Hex);
+    this.rfqContract = rfqContract || '0x0000000000000000000000000000000000000000';
   }
 
   async handleQuote(query: any): Promise<any> {
@@ -39,23 +41,25 @@ export class KyberSwapAdapter extends BaseAdapter {
     // Note: KyberSwap often requires signing an EIP-712 message.
     // The exact domain and types depend on the specific KyberSwap deployment.
 
-    const response = {
+    const nonce = BigInt(Math.floor(Date.now() / 1000));
+    const expiry = BigInt(Math.floor(Date.now() / 1000) + 60);
+
+    const order = {
       maker: this.account.address,
-      sellToken: validated.sellToken,
-      buyToken: validated.buyToken,
-      sellAmount: validated.sellAmount,
-      buyAmount: buyAmountWithSpread,
-      // signature: ...
+      sellToken: validated.sellToken as Hex,
+      buyToken: validated.buyToken as Hex,
+      sellAmount: BigInt(validated.sellAmount),
+      buyAmount: BigInt(buyAmountWithSpread),
+      nonce,
+      expiry,
     };
 
-    // Example of EIP-712 signing for Kyber (placeholders for contract addresses)
-    /*
     const signature = await this.account.signTypedData({
         domain: {
             name: 'KyberSwap RFQ',
             version: '1',
             chainId: validated.chainId,
-            verifyingContract: '0x...', // Kyber RFQ contract
+            verifyingContract: this.rfqContract as Hex,
         },
         primaryType: 'Order',
         types: {
@@ -69,18 +73,20 @@ export class KyberSwapAdapter extends BaseAdapter {
                 { name: 'expiry', type: 'uint256' },
             ],
         },
-        message: {
-            ...response,
-            nonce: 1n,
-            expiry: BigInt(Math.floor(Date.now() / 1000) + 60),
-        },
+        message: order,
     });
-    */
 
     return {
-        ...response,
         status: 'OK',
-        message: 'Quote fetched from 0x'
+        message: 'Quote fetched from 0x',
+        order: {
+            ...order,
+            sellAmount: order.sellAmount.toString(),
+            buyAmount: order.buyAmount.toString(),
+            nonce: order.nonce.toString(),
+            expiry: order.expiry.toString(),
+        },
+        signature,
     };
   }
 }

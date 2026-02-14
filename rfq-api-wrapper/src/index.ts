@@ -28,9 +28,9 @@ if (!ZERO_EX_API_KEY || !PRIVATE_KEY) {
 const zeroExService = new ZeroExService(ZERO_EX_API_KEY);
 const adapters = [
   new OneInchAdapter(zeroExService, PRIVATE_KEY, process.env.ONE_INCH_ROUTER_ADDRESS),
-  new ParaSwapAdapter(zeroExService, PRIVATE_KEY),
+  new ParaSwapAdapter(zeroExService, PRIVATE_KEY, process.env.PARASWAP_PMM_ADDRESS),
   new EnsoAdapter(zeroExService),
-  new KyberSwapAdapter(zeroExService, PRIVATE_KEY),
+  new KyberSwapAdapter(zeroExService, PRIVATE_KEY, process.env.KYBERSWAP_RFQ_ADDRESS),
   new OpenOceanAdapter(zeroExService),
 ];
 
