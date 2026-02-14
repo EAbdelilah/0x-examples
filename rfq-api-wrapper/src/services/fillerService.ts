@@ -24,6 +24,7 @@ const REACTOR_ABI = parseAbi([
 export class FillerService {
   private readonly UNISWAPX_API = 'https://api.uniswap.org/v2/orders';
   private account: Account | null = null;
+  private ethPriceCache: Map<string, { price: bigint; timestamp: number }> = new Map();
 
   constructor(private zeroExService: ZeroExService) {
     const pk = process.env.PRIVATE_KEY;
@@ -112,10 +113,46 @@ export class FillerService {
       // In production, we must subtract gas costs if we are paying them
       const profit = zeroExOutput - requiredOutput;
 
-      logger.debug(`Profit for ${order.orderHash}: ${profit.toString()} (Gas: ${gasCost.toString()})`);
+      // Convert gasCost (wei) to buyToken units to ensure we are comparing apples to apples
+      let gasCostInBuyToken = 0n;
+      const NATIVE_TOKEN = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      const weth = CHAINS[chainId]?.tokens?.WETH?.toLowerCase();
 
-      if (profit > gasCost) {
-        logger.info(`🔥 Profitable order found! Expected Profit: ${formatUnits(profit - gasCost, 18)} ETH-equivalent`);
+      if (buyToken.toLowerCase() === NATIVE_TOKEN || (weth && buyToken.toLowerCase() === weth)) {
+        gasCostInBuyToken = gasCost;
+      } else {
+        try {
+          // Check cache for ETH price (1 minute TTL)
+          const cacheKey = `${chainId}-${buyToken.toLowerCase()}`;
+          const cached = this.ethPriceCache.get(cacheKey);
+          let buyTokensPerEth: bigint;
+
+          if (cached && Date.now() - cached.timestamp < 60000) {
+            buyTokensPerEth = cached.price;
+          } else {
+            // Fetch price of 1 ETH in terms of buyToken
+            const ethPrice = await this.zeroExService.getPrice({
+              sellToken: NATIVE_TOKEN,
+              buyToken: buyToken,
+              sellAmount: (10n ** 18n).toString(), // 1 ETH
+              chainId,
+            });
+            buyTokensPerEth = BigInt(ethPrice.buyAmount);
+            this.ethPriceCache.set(cacheKey, { price: buyTokensPerEth, timestamp: Date.now() });
+          }
+
+          gasCostInBuyToken = (gasCost * buyTokensPerEth) / (10n ** 18n);
+        } catch (error: any) {
+          logger.debug(`Could not convert gas cost for ${buyToken}: ${error.message}`);
+          // If we can't get the price, we skip for now to avoid unprofitable trades.
+          return;
+        }
+      }
+
+      logger.debug(`Profit for ${order.orderHash}: ${profit.toString()} (Gas: ${gasCostInBuyToken.toString()} in ${buyToken} units)`);
+
+      if (profit > gasCostInBuyToken) {
+        logger.info(`🔥 Profitable order found! Expected Net Profit: ${profit - gasCostInBuyToken} (in ${buyToken} atoms)`);
 
         dbService.saveOrder({
           orderHash: order.orderHash,
