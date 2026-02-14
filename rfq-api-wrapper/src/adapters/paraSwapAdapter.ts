@@ -17,10 +17,12 @@ const ParaSwapPriceSchema = z.object({
 
 export class ParaSwapAdapter extends BaseAdapter {
   private account;
+  private pmmContract: string;
 
-  constructor(zeroExService: ZeroExService, privateKey: string) {
+  constructor(zeroExService: ZeroExService, privateKey: string, pmmContract?: string) {
     super('ParaSwap', zeroExService);
     this.account = privateKeyToAccount(`0x${privateKey.replace('0x', '')}` as Hex);
+    this.pmmContract = pmmContract || '0xdef171fe48cf0148b1a80588e8984849ef5d5744'; // Default to 0x Proxy or override with ParaSwap PMM
   }
 
   async handleQuote(query: any): Promise<any> {
@@ -53,14 +55,12 @@ export class ParaSwapAdapter extends BaseAdapter {
     };
 
     if (validated.isFirmQuote) {
-        // Implement ParaSwap EIP-712 signing if needed
-        // This usually depends on the ParaSwap Augustus version being used
-        // For now, we return a signed message that represents the quote
+        // Implement ParaSwap EIP-712 signing
         const domain = {
             name: 'ParaSwap PMM',
             version: '1',
             chainId: validated.network,
-            verifyingContract: '0xdef171fe48cf0148b1a80588e8984849ef5d5744' as Hex, // Placeholder
+            verifyingContract: this.pmmContract as Hex,
         };
 
         const types = {
