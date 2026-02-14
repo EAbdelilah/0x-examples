@@ -88,6 +88,18 @@ bun run maker
 bun run filler
 ```
 
+### Gas Management
+
+If you are running the **UniswapX Filler Bot**, you must have the chain's native token (e.g., ETH on Base, BNB on BSC) in your `MM_ADDRESS` wallet.
+
+**Why is gas needed?**
+Unlike "Maker" strategies where you sign an off-chain order that someone else settles, the "Filler" strategy requires *you* to be the transaction sender. You call the UniswapX Reactor contract to execute the trade, which costs gas.
+
+**How much gas do I need?**
+- **L2s (Base, Arbitrum, Optimism)**: Very cheap. Keeping **0.05 ETH** is usually enough for hundreds of trades.
+- **Mainnet**: Expensive. You should have at least **0.2 - 0.5 ETH** to be safe, as a single fill can cost 0.01 - 0.03 ETH depending on congestion.
+- **Estimate**: The bot assumes a gas limit of ~300,000 units per fill.
+
 ### Running Tests
 
 ```bash

@@ -150,9 +150,11 @@ export class FillerService {
       }
 
       logger.debug(`Profit for ${order.orderHash}: ${profit.toString()} (Gas: ${gasCostInBuyToken.toString()} in ${buyToken} units)`);
+      logger.info(`Order ${order.orderHash.slice(0, 10)}...: Potential Profit ${profit.toString()} vs Est. Gas ${gasCostInBuyToken.toString()} (in ${buyToken} atoms)`);
 
       if (profit > gasCostInBuyToken) {
-        logger.info(`🔥 Profitable order found! Expected Net Profit: ${profit - gasCostInBuyToken} (in ${buyToken} atoms)`);
+        const netProfit = profit - gasCostInBuyToken;
+        logger.info(`🔥 Profitable order found! Expected Net Profit: ${netProfit.toString()} (in ${buyToken} atoms). Est Gas Cost: ${formatUnits(gasCost, 18)} native`);
 
         dbService.saveOrder({
           orderHash: order.orderHash,
