@@ -38,7 +38,6 @@ export const CHAINS: Record<number, ChainConfig> = {
             USDT: '0x55d398326f99059ff775485246999027b3197955',
             WBTC: '0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c',
         },
-        uniswapXReactor: '0xDB9D365b50E62fce747A90515D2bd1254A16EbB9',
     },
     137: {
         name: 'Polygon',
@@ -49,7 +48,7 @@ export const CHAINS: Record<number, ChainConfig> = {
             USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
             WBTC: '0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6',
         },
-        uniswapXReactor: '0x00000011F84B9aa48e5f8aA8B9897600006289Be',
+        uniswapXReactor: '0x6000da47483062A0D734Ba3dc7576Ce6A0B645C4',
     },
     250: {
         name: 'Fantom',
