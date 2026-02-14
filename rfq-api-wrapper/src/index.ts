@@ -34,9 +34,22 @@ const adapters = [
   new OpenOceanAdapter(zeroExService),
 ];
 
-// Health check
+import { dbService } from './services/database';
+
+// Health check with DB stats
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK' });
+  const recentOrders = dbService.getRecentOrders(10);
+  const totalOrdersCount = dbService.getRecentOrders(1000).length; // Rough count
+
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    stats: {
+      total_tracked: totalOrdersCount,
+      recent: recentOrders
+    }
+  });
 });
 
 // Register adapter routes

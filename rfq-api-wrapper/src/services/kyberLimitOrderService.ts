@@ -12,6 +12,10 @@ export class KyberLimitOrderService {
     this.account = privateKeyToAccount(`0x${privateKey.replace('0x', '')}` as Hex);
   }
 
+  getAddress(): string {
+    return this.account.address;
+  }
+
   async createAndPostOrder(params: {
     makerAsset: string;
     takerAsset: string;

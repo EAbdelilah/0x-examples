@@ -5,16 +5,17 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "start": "bun run src/index.ts",
-    "maker": "bun run src/maker.ts",
-    "filler": "bun run src/filler.ts",
-    "verify": "bun run src/verify-setup.ts",
-    "dev": "bun --watch src/index.ts",
+    "start": "npx tsx src/index.ts",
+    "maker": "npx tsx src/maker.ts",
+    "filler": "npx tsx src/filler.ts",
+    "verify": "npx tsx src/verify-setup.ts",
+    "dev": "npx tsx --watch src/index.ts",
     "test": "vitest",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
     "axios": "^1.13.4",
+    "better-sqlite3": "^12.6.2",
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
@@ -24,8 +25,10 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.6",
     "@types/node": "^25.1.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   }
