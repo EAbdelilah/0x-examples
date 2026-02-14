@@ -76,12 +76,18 @@ export class KyberLimitOrderService {
 
       const response = await axios.post(`${this.baseUrl}/write/api/v1/orders`, postPayload);
       logger.info('Successfully posted order to KyberSwap');
-      return response.data;
+
+      // Ensure we return a structured response
+      return {
+        status: response.data.status || 'SUCCESS',
+        data: response.data.data || response.data,
+      };
     } catch (error: any) {
-      logger.warn('Failed to post to KyberSwap API', error.response?.data || error.message);
+      const errorData = error.response?.data || error.message;
+      logger.warn('Failed to post to KyberSwap API', errorData);
       return {
         status: 'FAILED',
-        error: error.response?.data || error.message,
+        error: errorData,
       };
     }
   }

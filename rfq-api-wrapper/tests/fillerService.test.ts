@@ -24,10 +24,16 @@ describe('FillerService', () => {
         orders: [
           {
             orderHash: '0xhash1',
-            sellToken: '0xuserSell',
-            buyToken: '0xuserBuy',
-            sellAmount: '100',
-            currentOutputs: [{ amount: '90' }], // User wants 90
+            input: {
+              token: '0xuserSell',
+              amount: '100',
+            },
+            outputs: [
+              {
+                token: '0xuserBuy',
+                amount: '90',
+              },
+            ],
             encodedOrder: '0xencoded',
             signature: '0xsig'
           }
@@ -36,8 +42,13 @@ describe('FillerService', () => {
     });
 
     // Mock 0x response: we can get 100 for them
-    mockZeroExService.getPrice.mockResolvedValue({
+    mockZeroExService.getPrice.mockResolvedValueOnce({
       buyAmount: '100'
+    });
+
+    // Mock 0x response for gas conversion (ETH -> 0xuserBuy)
+    mockZeroExService.getPrice.mockResolvedValueOnce({
+      buyAmount: '1000000' // 1 ETH = 1,000,000 0xuserBuy
     });
 
     // We expect log or some action. Since executeFill just logs for now, we'll spy on logger.

@@ -33,6 +33,24 @@ describe('ZeroExService', () => {
     );
   });
 
+  it('should use correct subdomain for non-Ethereum chains', async () => {
+    const mockResponse = { data: { buyAmount: '1000' } };
+    mockedAxios.get.mockResolvedValueOnce(mockResponse);
+
+    const params = {
+      sellToken: '0x123',
+      buyToken: '0x456',
+      sellAmount: '100',
+      chainId: 8453, // Base
+    };
+
+    await service.getPrice(params);
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect.stringContaining('https://base.api.0x.org/swap/permit2/price'),
+      expect.any(Object)
+    );
+  });
+
   it('should throw ExternalApiError on failure', async () => {
     mockedAxios.get.mockRejectedValueOnce({
       response: {
