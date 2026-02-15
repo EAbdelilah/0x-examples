@@ -12,18 +12,26 @@ const TICK_INTERVAL = Number(process.env.TICK_INTERVAL || '30000');
 const zeroExService = new ZeroExService(ZERO_EX_API_KEY);
 const fillerService = new FillerService(zeroExService);
 
-// Identify chains with UniswapX reactors
-const searchableChains = Object.values(CHAINS).filter(c => c.uniswapXReactor);
+// Identify chains with any fillable intent source (UniswapX or Enso)
+const searchableChains = Object.values(CHAINS).filter(c => c.uniswapXReactor || c.ensoRouter);
 
 async function tick() {
-  logger.info('--- Filler Bot Tick ---');
-  try {
-    for (const chain of searchableChains) {
-      await fillerService.monitorUniswapX(chain.chainId);
+  logger.info('--- Multi-Chain Filler Bot Tick ---');
+
+  const tasks = searchableChains.map(async (chain) => {
+    try {
+      logger.debug(`Monitoring chain ${chain.chainId} (${chain.name})...`);
+      // Run monitors for this chain in parallel
+      await Promise.all([
+        fillerService.monitorUniswapX(chain.chainId),
+        fillerService.monitorEnso(chain.chainId)
+      ]);
+    } catch (error: any) {
+      logger.error(`Error on chain ${chain.chainId} (${chain.name}):`, error.message);
     }
-  } catch (error) {
-    logger.error('Failed to run filler tick:', error);
-  }
+  });
+
+  await Promise.all(tasks);
 }
 
 async function main() {

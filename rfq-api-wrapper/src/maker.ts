@@ -83,8 +83,7 @@ async function tick() {
       });
 
       if (balance < amount) {
-        logger.warn(`Skipping ${pair.sellSymbol}/${pair.buySymbol}: Insufficient balance (${formatUnits(balance, 18)} < ${formatUnits(amount, 18)})`);
-        continue;
+        logger.warn(`⚠️ Warning: ${pair.sellSymbol}/${pair.buySymbol} has insufficient balance (${formatUnits(balance, 18)} < ${formatUnits(amount, 18)}). Order may be unfillable on-chain.`);
       }
 
       logger.info(`Creating order for ${pair.sellSymbol} -> ${pair.buySymbol}`);

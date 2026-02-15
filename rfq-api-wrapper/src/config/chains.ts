@@ -5,6 +5,9 @@ export interface ChainConfig {
         [symbol: string]: string;
     };
     uniswapXReactor?: string;
+    balancerVault?: string;
+    atomicBroker?: string;
+    ensoRouter?: string;
 }
 
 export const CHAINS: Record<number, ChainConfig> = {
@@ -18,6 +21,7 @@ export const CHAINS: Record<number, ChainConfig> = {
             WBTC: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599',
         },
         uniswapXReactor: '0x00000011F84B9aa48e5f8aA8B9897600006289Be',
+        balancerVault: '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
     },
     10: {
         name: 'Optimism',
@@ -49,6 +53,9 @@ export const CHAINS: Record<number, ChainConfig> = {
             WBTC: '0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6',
         },
         uniswapXReactor: '0x6000da47483062A0D734Ba3dc7576Ce6A0B645C4',
+        balancerVault: '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
+        atomicBroker: '0xf4f4484fe47fac600ee3cb88eba1b7fd2757f0fa',
+        ensoRouter: '0xF75584eF6673aD213a685a1B58Cc0330B8eA22Cf',
     },
     250: {
         name: 'Fantom',
@@ -97,6 +104,9 @@ export const CHAINS: Record<number, ChainConfig> = {
             WBTC: '0x0555E30da8f98308EdB960aa94C0Db47230d2B9c',
         },
         uniswapXReactor: '0x000000001Ec5656dcdB24D90DFa42742738De729',
+        balancerVault: '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
+        atomicBroker: '0x5fbdb2315678afecb367f032d93f642f64180aa3',
+        ensoRouter: '0xF75584eF6673aD213a685a1B58Cc0330B8eA22Cf',
     },
     34443: {
         name: 'Mode',
@@ -118,6 +128,7 @@ export const CHAINS: Record<number, ChainConfig> = {
             WBTC: '0x2f2a2543B76A92837466Cc2A9AB68e52bD69AAE4',
         },
         uniswapXReactor: '0xB274d5F4b833b61B340b654d600A864fB604a87c',
+        balancerVault: '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
     },
     43114: {
         name: 'Avalanche',

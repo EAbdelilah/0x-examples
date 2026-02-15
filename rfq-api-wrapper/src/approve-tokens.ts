@@ -65,10 +65,15 @@ async function approveTokens() {
     logger.info(`--- Approving Tokens for Maker Bot (${account.address}) ---`);
 
     // Get chains from config
-    const configuredChains = Object.values(CHAINS);
+    // Prioritize Polygon (137) and Arbitrum (42161)
+    const priorityChains = [137, 42161];
+    const otherChains = Object.values(CHAINS).filter(c => !priorityChains.includes(c.chainId)).map(c => c.chainId);
+    const sortedChainIds = [...priorityChains, ...otherChains];
 
-    for (const chainConfig of configuredChains) {
-        const chainId = chainConfig.chainId;
+    for (const chainId of sortedChainIds) {
+        const chainConfig = CHAINS[chainId];
+        if (!chainConfig) continue;
+
         const chain = chainMap[chainId];
 
         if (!chain) {

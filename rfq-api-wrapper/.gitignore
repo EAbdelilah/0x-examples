@@ -4,3 +4,6 @@ dist
 .DS_Store
 *.log
 bot_data.db
+artifacts
+cache
+8.0.0
