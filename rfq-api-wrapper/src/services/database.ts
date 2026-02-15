@@ -16,12 +16,20 @@ export interface PersistedOrder {
     createdAt?: string;
 }
 
+export interface PersistedPrice {
+    id?: number;
+    chainId: number;
+    tokenAddress: string;
+    priceInNative: string;
+    createdAt?: string;
+}
+
 export class DatabaseService {
     private db: Database.Database;
 
-    constructor() {
-        const dbPath = path.resolve(process.cwd(), 'bot_data.db');
-        this.db = new Database(dbPath);
+    constructor(dbPath?: string) {
+        const pathStr = dbPath || path.resolve(process.cwd(), 'bot_data.db');
+        this.db = new Database(pathStr);
         this.init();
     }
 
@@ -38,6 +46,16 @@ export class DatabaseService {
         buyAmount TEXT,
         status TEXT,
         txHash TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+        this.db.exec(`
+      CREATE TABLE IF NOT EXISTS prices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chainId INTEGER,
+        tokenAddress TEXT,
+        priceInNative TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -75,6 +93,33 @@ export class DatabaseService {
     getRecentOrders(limit: number = 10): PersistedOrder[] {
         const stmt = this.db.prepare('SELECT * FROM orders ORDER BY createdAt DESC LIMIT ?');
         return stmt.all(limit) as PersistedOrder[];
+    }
+
+    savePrice(chainId: number, tokenAddress: string, priceInNative: string) {
+        const stmt = this.db.prepare(`
+            INSERT INTO prices (chainId, tokenAddress, priceInNative)
+            VALUES (?, ?, ?)
+        `);
+        stmt.run(chainId, tokenAddress, priceInNative);
+    }
+
+    getRecentPrices(chainId: number, tokenAddress: string, limit: number = 10): PersistedPrice[] {
+        const stmt = this.db.prepare(`
+            SELECT * FROM prices
+            WHERE chainId = ? AND tokenAddress = ?
+            ORDER BY createdAt DESC
+            LIMIT ?
+        `);
+        return stmt.all(chainId, tokenAddress, limit) as PersistedPrice[];
+    }
+
+    clearOldPrices(days: number = 7) {
+        const stmt = this.db.prepare("DELETE FROM prices WHERE createdAt < datetime('now', ?)");
+        stmt.run(`-${days} days`);
+    }
+
+    clearAllPrices() {
+        this.db.prepare("DELETE FROM prices").run();
     }
 }
 

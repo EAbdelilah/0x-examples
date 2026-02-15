@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EnsoAdapter } from '../src/adapters/ensoAdapter';
 import { OpenOceanAdapter } from '../src/adapters/openOceanAdapter';
+import { dbService } from '../src/services/database';
 
 describe('Enso and OpenOcean Adapters', () => {
   let mockZeroExService: any;
 
   beforeEach(() => {
+    process.env.SPREAD_BPS = '0';
+    dbService.clearAllPrices();
     mockZeroExService = {
       getPrice: vi.fn(),
     };

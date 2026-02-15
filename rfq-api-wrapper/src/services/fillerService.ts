@@ -1,6 +1,7 @@
 import axios from 'axios';
 import logger from '../utils/logger';
 import { ZeroExService } from './zeroExService';
+import { spreadService } from './spreadService';
 import {
   Hex,
   createWalletClient,
@@ -188,8 +189,11 @@ export class FillerService {
       const gasCost = estimatedGas * gasPrice;
 
       // 4. Profitability
-      const spreadBps = BigInt(process.env.SPREAD_BPS || '0');
-      const requiredOutput = (currentAuctionOutput * (10000n + spreadBps)) / 10000n;
+      const spreadBps = await spreadService.getEffectiveSpread(chainId, buyToken);
+      const requiredOutput = (currentAuctionOutput * (10000n + BigInt(spreadBps))) / 10000n;
+
+      // Track price for volatility guard
+      await spreadService.trackPrice(chainId, buyToken, zeroExPrice.buyAmount);
 
       // Normalization for comparison
       const decimals = await this.getTokenDecimals(buyToken, chainId);
