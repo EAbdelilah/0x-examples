@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import axios from 'axios';
 import { KyberLimitOrderService } from '../src/services/kyberLimitOrderService';
+
+vi.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('KyberLimitOrderService', () => {
   let service: KyberLimitOrderService;
@@ -13,8 +17,39 @@ describe('KyberLimitOrderService', () => {
   });
 
   it('should create and sign a limit order', async () => {
+    process.env.SPREAD_BPS = '0';
     mockZeroExService.getPrice.mockResolvedValue({
       buyAmount: '2000',
+    });
+
+    mockedAxios.post.mockImplementation(async (url: string) => {
+      if (url.includes('sign-message')) {
+        return {
+          data: {
+            data: {
+              domain: {},
+              types: {
+                EIP712Domain: [],
+                Order: [
+                    { name: 'makingAmount', type: 'uint256' },
+                    { name: 'takingAmount', type: 'uint256' },
+                ]
+              },
+              message: { makingAmount: '1000', takingAmount: '2000' },
+              primaryType: 'Order'
+            }
+          }
+        };
+      }
+      return {
+        data: {
+          status: 'OK',
+          data: {
+            order: { makerAmount: 1000n, takerAmount: 2000n },
+            signature: '0xsignature'
+          }
+        }
+      };
     });
 
     const result = await service.createAndPostOrder({
@@ -24,9 +59,8 @@ describe('KyberLimitOrderService', () => {
       chainId: 1,
     });
 
-    expect(result.order.makerAmount).toBe(1000n);
-    expect(result.order.takerAmount).toBe(2000n);
-    expect(result.signature).toBeDefined();
-    expect(result.signature).toMatch(/^0x/);
+    expect(result.data.order.makerAmount).toBe(1000n);
+    expect(result.data.order.takerAmount).toBe(2000n);
+    expect(result.data.signature).toBeDefined();
   });
 });

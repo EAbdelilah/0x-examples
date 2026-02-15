@@ -78,7 +78,7 @@ export class KyberLimitOrderService {
       logger.info('Successfully posted order to KyberSwap');
       return response.data;
     } catch (error: any) {
-      logger.warn('Failed to post to KyberSwap API', error.response?.data || error.message);
+      logger.warn(`Failed to post to KyberSwap API: ${error.message}`, error.response?.data);
       return {
         status: 'FAILED',
         error: error.response?.data || error.message,

@@ -41,7 +41,7 @@ export class ParaSwapAdapter extends BaseAdapter {
     }
 
     const zeroExPrice = await this.zeroExService.getPrice(params);
-    const buyAmountWithSpread = this.applySpread(zeroExPrice.buyAmount);
+    const buyAmountWithSpread = await this.applySpread(zeroExPrice.buyAmount, validated.network, validated.to);
 
     const response: any = {
       price: buyAmountWithSpread,

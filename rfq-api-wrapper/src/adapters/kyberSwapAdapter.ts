@@ -33,7 +33,7 @@ export class KyberSwapAdapter extends BaseAdapter {
       chainId: validated.chainId,
     });
 
-    const buyAmountWithSpread = this.applySpread(zeroExPrice.buyAmount);
+    const buyAmountWithSpread = await this.applySpread(zeroExPrice.buyAmount, validated.chainId, validated.buyToken);
 
     // KyberSwap RFQ format
     // Note: KyberSwap often requires signing an EIP-712 message.
