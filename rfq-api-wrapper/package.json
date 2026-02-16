@@ -8,6 +8,8 @@
     "start": "npx tsx src/index.ts",
     "maker": "npx tsx src/maker.ts",
     "filler": "npx tsx src/filler.ts",
+    "dry-run": "npx tsx src/dry-run.ts",
+    "simulate": "npx tsx src/simulate-trades.ts",
     "verify": "npx tsx src/verify-setup.ts",
     "dev": "npx tsx --watch src/index.ts",
     "test": "vitest",
