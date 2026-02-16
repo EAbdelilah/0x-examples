@@ -36,6 +36,26 @@ The updated `ArbitrageService.ts` supports:
 - **Uniswap V3 Pools**: Concentrated liquidity pools where most market volume now resides.
 - **Multi-Chain Scanning**: Simultaneously monitors Base, Polygon, and Ethereum Mainnet.
 
+## Profitability & Risk Management
+
+Whether the bot is profitable depends on three key factors that are built into this implementation:
+
+### 1. The Revenue Pillars
+- **RFQ Quoting (The Spread)**: Every quote you give (e.g., on 1inch) has a built-in margin (default 50 bps). If the trade settles, you keep that margin. Since the user pays the gas, this is high-frequency, low-risk revenue.
+- **UniswapX Filling (Dutch Auctions)**: The bot only fills an auction when the price has decayed enough to cover: `0x Price + Spread + Gas Fee`. If `normalizedProfit <= gasCost`, the bot ignores the order.
+- **DEX-to-DEX Arbitrage**: The `ArbitrageService` uses a **1% profit threshold**. It will only trigger the `AtomicBroker` if the price discrepancy between the source pool and the 0x market is large enough to offset transaction costs and provide a meaningful gain.
+
+### 2. The Volatility Guard (Risk Mitigation)
+High volatility is the biggest risk for market makers (getting "picked off").
+- **The Implementation**: The `SpreadService` tracks the price ratio of every token pair. If price movement exceeds 1% in the tracking window, the bot automatically **doubles the spread** (adds a 50 bps surcharge).
+- **The Result**: This ensures you are compensated for the higher risk of market movement during the settlement period.
+
+### 3. Cost Considerations
+- **0x Protocol Fee**: 0x typically charges ~15 bps on swaps. Your `SPREAD_BPS` must always be higher than this (e.g., 25-50 bps) to be net-profitable.
+- **Gas Fees**: On L2s like **Base**, gas is negligible (~$0.01), allowing you to capture even small 1% arbitrage opportunities. On **Ethereum Mainnet**, the bot's profitability threshold must be much higher to overcome $10-$50 gas costs.
+
+**Summary**: By using the **Hub-and-Spoke (1 vs 100+) strategy**, you maximize the surface area for finding profit while the **Volatility Guard** and **Profit Thresholds** minimize the risk of losing money on bad trades.
+
 ## 2. CoW Swap Solver (Permissioned)
 CoW Swap uses "Solvers" to find the best execution for batches of orders.
 - **Edge**: You can use 0x to provide the liquidity needed to settle CoW Swap batches.
