@@ -41,7 +41,12 @@ export class ParaSwapAdapter extends BaseAdapter {
     }
 
     const zeroExPrice = await this.zeroExService.getPrice(params);
-    const buyAmountWithSpread = this.applySpread(zeroExPrice.buyAmount);
+    const buyAmountWithSpread = this.applySpread(zeroExPrice.buyAmount, {
+      sellToken: validated.from,
+      buyToken: validated.to,
+      sellAmount: validated.side === 'SELL' ? validated.amount : '0',
+      chainId: validated.network,
+    });
 
     const response: any = {
       price: buyAmountWithSpread,
@@ -53,48 +58,48 @@ export class ParaSwapAdapter extends BaseAdapter {
     };
 
     if (validated.isFirmQuote) {
-        // Implement ParaSwap EIP-712 signing if needed
-        // This usually depends on the ParaSwap Augustus version being used
-        // For now, we return a signed message that represents the quote
-        const domain = {
-            name: 'ParaSwap PMM',
-            version: '1',
-            chainId: validated.network,
-            verifyingContract: '0xdef171fe48cf0148b1a80588e8984849ef5d5744' as Hex, // Placeholder
-        };
+      // Implement ParaSwap EIP-712 signing if needed
+      // This usually depends on the ParaSwap Augustus version being used
+      // For now, we return a signed message that represents the quote
+      const domain = {
+        name: 'ParaSwap PMM',
+        version: '1',
+        chainId: validated.network,
+        verifyingContract: '0xdef171fe48cf0148b1a80588e8984849ef5d5744' as Hex, // Placeholder
+      };
 
-        const types = {
-            Quote: [
-                { name: 'from', type: 'address' },
-                { name: 'to', type: 'address' },
-                { name: 'amount', type: 'uint256' },
-                { name: 'price', type: 'uint256' },
-                { name: 'salt', type: 'uint256' },
-                { name: 'expiry', type: 'uint256' },
-            ],
-        };
+      const types = {
+        Quote: [
+          { name: 'from', type: 'address' },
+          { name: 'to', type: 'address' },
+          { name: 'amount', type: 'uint256' },
+          { name: 'price', type: 'uint256' },
+          { name: 'salt', type: 'uint256' },
+          { name: 'expiry', type: 'uint256' },
+        ],
+      };
 
-        const randomValues = new Uint32Array(1);
-        crypto.getRandomValues(randomValues);
+      const randomValues = new Uint32Array(1);
+      crypto.getRandomValues(randomValues);
 
-        const message = {
-            from: validated.from as Hex,
-            to: validated.to as Hex,
-            amount: BigInt(validated.amount),
-            price: BigInt(buyAmountWithSpread),
-            salt: BigInt(randomValues[0]),
-            expiry: BigInt(Math.floor(Date.now() / 1000) + 60), // 60 seconds
-        };
+      const message = {
+        from: validated.from as Hex,
+        to: validated.to as Hex,
+        amount: BigInt(validated.amount),
+        price: BigInt(buyAmountWithSpread),
+        salt: BigInt(randomValues[0]),
+        expiry: BigInt(Math.floor(Date.now() / 1000) + 60), // 60 seconds
+      };
 
-        const signature = await this.account.signTypedData({
-            domain,
-            primaryType: 'Quote',
-            types,
-            message,
-        });
+      const signature = await this.account.signTypedData({
+        domain,
+        primaryType: 'Quote',
+        types,
+        message,
+      });
 
-        response.signature = signature;
-        response.order = message;
+      response.signature = signature;
+      response.order = message;
     }
 
     return response;

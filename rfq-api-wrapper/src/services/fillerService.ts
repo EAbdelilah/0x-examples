@@ -199,11 +199,16 @@ export class FillerService {
       // Note: This assumes 1 buyToken unit is roughly 1 Native token unit value-wise for simple comparison
       // In production, you'd multiply profit by (NativePrice / TokenPrice)
       const normalizedProfit = (profitRaw * BigInt(10 ** (18 - Math.min(18, decimals))));
+      const netProfit = normalizedProfit - gasCost;
 
-      logger.debug(`Profit for ${order.orderHash}: ${formatUnits(profitRaw, decimals)} (Gas: ${formatUnits(gasCost, 18)})`);
+      // Log Every Opportunity at INFO level
+      const profitFormatted = formatUnits(netProfit, 18);
+      const isProfitable = netProfit > 0n;
 
-      if (normalizedProfit > gasCost) {
-        logger.info(`🔥 Profitable order found! Expected Profit: ${formatUnits(normalizedProfit - gasCost, 18)} native-equivalent`);
+      logger.info(`Chain ${chainId}: Order ${order.orderHash.slice(0, 10)}... | Potential Net: ${profitFormatted} native | ${isProfitable ? '🔥 PROFITABLE' : '❄️ Skip'}`);
+
+      if (netProfit > 0n) {
+        logger.info(`🚀 EXECUTION TRIGGERED! Expected Profit: ${profitFormatted} native-equivalent`);
 
         dbService.saveOrder({
           orderHash: order.orderHash,

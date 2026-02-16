@@ -16,7 +16,7 @@ const OneInchQuoteSchema = z.object({
   takerAddress: z.string().optional(),
   chainId: z.coerce.number().default(1),
 }).refine(data => (data.fromTokenAddress || data.fromToken) && (data.toTokenAddress || data.toToken), {
-    message: "Must provide fromToken and toToken",
+  message: "Must provide fromToken and toToken",
 });
 
 // 1inch Limit Order Protocol V4 constants
@@ -49,7 +49,12 @@ export class OneInchAdapter extends BaseAdapter {
     });
 
     // Apply Spread
-    const buyAmountWithSpread = this.applySpread(zeroExPrice.buyAmount);
+    const buyAmountWithSpread = this.applySpread(zeroExPrice.buyAmount, {
+      sellToken: fromToken,
+      buyToken: toToken,
+      sellAmount: validated.amount,
+      chainId: validated.chainId,
+    });
 
     // 1inch Limit Order V4 Logic
     const makerAsset = toToken;
@@ -86,25 +91,25 @@ export class OneInchAdapter extends BaseAdapter {
     };
 
     const types = {
-        Order: [
-            { name: 'salt', type: 'uint256' },
-            { name: 'makerAsset', type: 'address' },
-            { name: 'takerAsset', type: 'address' },
-            { name: 'maker', type: 'address' },
-            { name: 'receiver', type: 'address' },
-            { name: 'allowedSender', type: 'address' },
-            { name: 'makingAmount', type: 'uint256' },
-            { name: 'takingAmount', type: 'uint256' },
-            { name: 'offsets', type: 'uint256' },
-            { name: 'interactions', type: 'bytes' },
-        ],
+      Order: [
+        { name: 'salt', type: 'uint256' },
+        { name: 'makerAsset', type: 'address' },
+        { name: 'takerAsset', type: 'address' },
+        { name: 'maker', type: 'address' },
+        { name: 'receiver', type: 'address' },
+        { name: 'allowedSender', type: 'address' },
+        { name: 'makingAmount', type: 'uint256' },
+        { name: 'takingAmount', type: 'uint256' },
+        { name: 'offsets', type: 'uint256' },
+        { name: 'interactions', type: 'bytes' },
+      ],
     };
 
     const signature = await this.account.signTypedData({
-        domain,
-        primaryType: 'Order',
-        types,
-        message: order,
+      domain,
+      primaryType: 'Order',
+      types,
+      message: order,
     });
 
     return {
@@ -125,23 +130,23 @@ export class OneInchAdapter extends BaseAdapter {
 
   private calculateOrderHash(order: any, domain: any): Hex {
     return hashTypedData({
-        domain,
-        primaryType: 'Order',
-        types: {
-            Order: [
-                { name: 'salt', type: 'uint256' },
-                { name: 'makerAsset', type: 'address' },
-                { name: 'takerAsset', type: 'address' },
-                { name: 'maker', type: 'address' },
-                { name: 'receiver', type: 'address' },
-                { name: 'allowedSender', type: 'address' },
-                { name: 'makingAmount', type: 'uint256' },
-                { name: 'takingAmount', type: 'uint256' },
-                { name: 'offsets', type: 'uint256' },
-                { name: 'interactions', type: 'bytes' },
-            ],
-        },
-        message: order,
+      domain,
+      primaryType: 'Order',
+      types: {
+        Order: [
+          { name: 'salt', type: 'uint256' },
+          { name: 'makerAsset', type: 'address' },
+          { name: 'takerAsset', type: 'address' },
+          { name: 'maker', type: 'address' },
+          { name: 'receiver', type: 'address' },
+          { name: 'allowedSender', type: 'address' },
+          { name: 'makingAmount', type: 'uint256' },
+          { name: 'takingAmount', type: 'uint256' },
+          { name: 'offsets', type: 'uint256' },
+          { name: 'interactions', type: 'bytes' },
+        ],
+      },
+      message: order,
     });
   }
 }
