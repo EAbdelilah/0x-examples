@@ -15,6 +15,8 @@ export class ArbitrageService {
 
   /**
    * Monitors a specific pair for arbitrage opportunities between 0x and Uniswap V2.
+   * NOTE: This is a "1 vs Many" strategy. We monitor 1 specific AMM pool and compare it
+   * against 0x, which aggregates liquidity from 100+ DEXs simultaneously.
    */
   async monitorUniswapV2(chainId: number, pairAddress: string) {
     const chainConfig = CHAINS[chainId];

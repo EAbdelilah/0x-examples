@@ -20,6 +20,12 @@ This strategy uses **Flash Loans**, which allow you to borrow millions of dollar
 
 **The Bottom Line**: You only pay the **gas fee** to submit the transaction. You never need to actually own the 100,000 USDC used for the trade.
 
+### The "1 vs. 100+" Advantage
+When you use `ArbitrageService.ts`, you aren't just comparing two DEXs. You are comparing **one specific DEX** (e.g., Uniswap V2) against **the entire market** (via 0x).
+- **Side A**: A single AMM pool (where price lags).
+- **Side B**: 0x Swap API, which aggregates liquidity from **100+ sources** (Uniswap V3, Curve, Balancer, etc.).
+- **Outcome**: This significantly increases your hit rate because you only need the price to be "wrong" in one specific pool, and 0x will automatically find the best place to liquidate that discrepancy for profit.
+
 ## 2. CoW Swap Solver (Permissioned)
 CoW Swap uses "Solvers" to find the best execution for batches of orders.
 - **Edge**: You can use 0x to provide the liquidity needed to settle CoW Swap batches.
