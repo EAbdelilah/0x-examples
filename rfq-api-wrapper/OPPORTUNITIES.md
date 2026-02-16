@@ -101,6 +101,32 @@ You've already started with the **Volatility Guard** in `SpreadService.ts`. You 
 - **Inventory-Aware Spreads**: Lower your spread if you already hold the token in your inventory (since you save the 0x protocol fee).
 - **Time-of-Day Spreads**: Adjust spreads based on market hours (e.g., higher spreads during low-liquidity periods like weekends).
 
+## 7. XEMM (Liquidity Mirroring / Remarketing)
+
+**Cross-Exchange Market Making (XEMM)** is the practice of "mirroring" the liquidity of one exchange onto another while adding a spread.
+
+### How this project implements XEMM:
+Actually, the **entire RFQ API Wrapper is an XEMM bot**.
+1.  **Source Exchange**: 0x Swap API (the aggregator of 100+ DEXs).
+2.  **Target Exchange**: 1inch, ParaSwap, or Enso (the aggregators where you provide quotes).
+3.  **The Flow**:
+    -   You see a price of **$2000** on the Source (0x).
+    -   You "mirror" that liquidity to the Target (1inch) at **$1990** (adding your 50 bps spread).
+    -   You are essentially "remarketing" 0x's deep liquidity as your own Private Market Maker liquidity.
+
+### The "Hedging" Advantage:
+In traditional XEMM, you have "execution risk" (the price moves between your fill on Exchange A and your hedge on Exchange B).
+-   **Atomic Hedging**: Because you use the `AtomicBroker`, your "Hedge" (the swap on 0x) happens in the **exact same block and transaction** as the user's trade on the target DEX.
+-   **Zero Risk**: If the 0x swap fails or the price is no longer profitable, the entire transaction reverts. You are never left with an "unhedged" position.
+
+### Advanced XEMM (CEX-to-DEX):
+You can expand this by mirroring liquidity from Centralized Exchanges (CEX) like Binance or Coinbase to a DEX like Base.
+-   **Strategy**: Provide quotes on Base using Binance prices (which are usually much tighter than any DEX).
+-   **Requirement**:
+    -   Hold **Inventory** (e.g., USDT and ETH) on the DEX to settle the user's trade.
+    -   Hold **Collateral** on the CEX to immediately execute a hedging trade.
+-   **The Edge**: You can provide the best price in all of DeFi because you are liquidating into the deepest pools in the world (Binance), while the user gets the convenience of trading on-chain.
+
 ---
 
 ## Technical Next Steps
