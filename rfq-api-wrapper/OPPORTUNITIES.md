@@ -20,11 +20,21 @@ This strategy uses **Flash Loans**, which allow you to borrow millions of dollar
 
 **The Bottom Line**: You only pay the **gas fee** to submit the transaction. You never need to actually own the 100,000 USDC used for the trade.
 
-### The "1 vs. 100+" Advantage
-When you use `ArbitrageService.ts`, you aren't just comparing two DEXs. You are comparing **one specific DEX** (e.g., Uniswap V2) against **the entire market** (via 0x).
-- **Side A**: A single AMM pool (where price lags).
-- **Side B**: 0x Swap API, which aggregates liquidity from **100+ sources** (Uniswap V3, Curve, Balancer, etc.).
-- **Outcome**: This significantly increases your hit rate because you only need the price to be "wrong" in one specific pool, and 0x will automatically find the best place to liquidate that discrepancy for profit.
+### The "All-DEX" Strategy (1 vs. 100+)
+To "check all DEXs" effectively, the bot doesn't need to manually scan every single exchange in existence. Instead, it leverages a **Hub-and-Spoke** model using 0x:
+
+1.  **Hub (Liquidation Engine)**: The bot uses **0x Swap API** as its primary exit. 0x already aggregates liquidity from **100+ DEXs simultaneously** (Uniswap, Curve, Balancer, Maverick, etc.).
+2.  **Spokes (Opportunity Sources)**: The bot monitors specific pools on "source" DEXs (like Aerodrome, Sushiswap, or Quickswap) that are prone to price lag.
+
+**Why this works**:
+- By monitoring just **10** high-potential pools across different DEXs and comparing each against 0x, you are effectively performing **1,000+ cross-DEX checks** every second.
+- If the price is "wrong" on Aerodrome (Base) compared to ANY of the 100+ sources aggregated by 0x, the bot identifies it instantly and liquidates the profit.
+
+### Comprehensive Coverage (V2 & V3)
+The updated `ArbitrageService.ts` supports:
+- **Uniswap V2 Clones**: Sushiswap, Aerodrome (Basic), Pancakeswap, etc.
+- **Uniswap V3 Pools**: Concentrated liquidity pools where most market volume now resides.
+- **Multi-Chain Scanning**: Simultaneously monitors Base, Polygon, and Ethereum Mainnet.
 
 ## 2. CoW Swap Solver (Permissioned)
 CoW Swap uses "Solvers" to find the best execution for batches of orders.

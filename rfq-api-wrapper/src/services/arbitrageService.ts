@@ -10,21 +10,116 @@ const UNISWAP_V2_PAIR_ABI = parseAbi([
   'function token1() view returns (address)',
 ]);
 
+const UNISWAP_V3_POOL_ABI = parseAbi([
+    'function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)',
+    'function token0() view returns (address)',
+    'function token1() view returns (address)',
+]);
+
 export class ArbitrageService {
   constructor(private zeroExService: ZeroExService) {}
 
   /**
-   * Monitors a specific pair for arbitrage opportunities between 0x and Uniswap V2.
+   * Monitors multiple DEX pools simultaneously.
+   * By checking many individual pools against the 0x Aggregator (100+ sources),
+   * we effectively scan the entire market for price discrepancies.
+   */
+  async monitorMultiplePools(pools: { chainId: number, address: string, dexName: string, version?: 'v2' | 'v3' }[]) {
+    logger.info(`Scanning ${pools.length} pools across multiple DEXs for arbitrage...`);
+
+    for (const pool of pools) {
+      if (pool.version === 'v3') {
+        await this.monitorUniswapV3(pool.chainId, pool.address, pool.dexName);
+      } else {
+        await this.monitorUniswapV2(pool.chainId, pool.address, pool.dexName);
+      }
+    }
+  }
+
+  /**
+   * Monitors a specific pair for arbitrage opportunities between 0x and a specific AMM.
    * NOTE: This is a "1 vs Many" strategy. We monitor 1 specific AMM pool and compare it
    * against 0x, which aggregates liquidity from 100+ DEXs simultaneously.
    */
-  async monitorUniswapV2(chainId: number, pairAddress: string) {
+  /**
+   * Monitors a Uniswap V3 pool for arbitrage opportunities.
+   */
+  async monitorUniswapV3(chainId: number, poolAddress: string, dexName: string = 'Uniswap V3') {
     const chainConfig = CHAINS[chainId];
     if (!chainConfig) return;
 
+    const rpcUrl = process.env[`RPC_URL_${chainId}`] || process.env.RPC_URL;
     const publicClient = createPublicClient({
-      chain: chainId === 1 ? mainnet : base, // Simplified for example
-      transport: http(process.env[`RPC_URL_${chainId}`]),
+      chain: chainId === 8453 ? base : mainnet,
+      transport: http(rpcUrl),
+    });
+
+    try {
+      const slot0 = await publicClient.readContract({
+        address: poolAddress as Hex,
+        abi: UNISWAP_V3_POOL_ABI,
+        functionName: 'slot0',
+      }) as any;
+
+      const token0 = await publicClient.readContract({
+        address: poolAddress as Hex,
+        abi: UNISWAP_V3_POOL_ABI,
+        functionName: 'token0',
+      }) as string;
+
+      const token1 = await publicClient.readContract({
+        address: poolAddress as Hex,
+        abi: UNISWAP_V3_POOL_ABI,
+        functionName: 'token1',
+      }) as string;
+
+      const decimals0 = await publicClient.readContract({
+        address: token0 as Hex,
+        abi: parseAbi(['function decimals() view returns (uint8)']),
+        functionName: 'decimals',
+      }) as number;
+
+      const decimals1 = await publicClient.readContract({
+        address: token1 as Hex,
+        abi: parseAbi(['function decimals() view returns (uint8)']),
+        functionName: 'decimals',
+      }) as number;
+
+      // Calculate V3 Price from sqrtPriceX96
+      // Price = (sqrtPriceX96 / 2^96)^2 * 10^(decimals0 - decimals1)
+      const sqrtPriceX96 = BigInt(slot0[0]);
+      const priceRatio = (Number(sqrtPriceX96) / 2**96)**2;
+      const ammPrice = priceRatio * 10**(decimals0 - decimals1);
+
+      // Check 0x price
+      const sellAmount = (10n ** BigInt(decimals0)).toString();
+      const zeroExPrice = await this.zeroExService.getPrice({
+        sellToken: token0,
+        buyToken: token1,
+        sellAmount,
+        chainId,
+      });
+
+      const zxPrice = Number(zeroExPrice.buyAmount) / 10**decimals1;
+
+      logger.info(`[${dexName} V3] Arbitrage Check ${token0}/${token1}: AMM=${ammPrice.toFixed(6)}, 0x=${zxPrice.toFixed(6)}`);
+
+      if (zxPrice > ammPrice * 1.01) {
+        logger.info(`🔥 Potential Arbitrage Found on ${dexName} V3! Buy on AMM, Sell on 0x.`);
+      }
+    } catch (error: any) {
+      logger.error(`Error monitoring arbitrage on V3 pool ${poolAddress}:`, error.message);
+    }
+  }
+
+  async monitorUniswapV2(chainId: number, pairAddress: string, dexName: string = 'Uniswap V2 Clone') {
+    const chainConfig = CHAINS[chainId];
+    if (!chainConfig) return;
+
+    const rpcUrl = process.env[`RPC_URL_${chainId}`] || process.env.RPC_URL;
+    const publicClient = createPublicClient({
+      chain: chainId === 8453 ? base : mainnet,
+      transport: http(rpcUrl),
     });
 
     try {
@@ -73,10 +168,10 @@ export class ArbitrageService {
 
       const zxPrice = Number(zeroExPrice.buyAmount) / 10**decimals1;
 
-      logger.info(`Arbitrage Check: AMM=${ammPrice.toFixed(6)}, 0x=${zxPrice.toFixed(6)}`);
+      logger.info(`[${dexName}] Arbitrage Check ${token0}/${token1}: AMM=${ammPrice.toFixed(6)}, 0x=${zxPrice.toFixed(6)}`);
 
       if (zxPrice > ammPrice * 1.01) { // 1% profit threshold
-        logger.info(`🔥 Potential Arbitrage! Buy on AMM, Sell on 0x.`);
+        logger.info(`🔥 Potential Arbitrage Found on ${dexName}! Buy on AMM, Sell on 0x.`);
 
         /**
          * ZERO-CAPITAL EXECUTION FLOW:
