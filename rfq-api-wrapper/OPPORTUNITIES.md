@@ -56,6 +56,27 @@ High volatility is the biggest risk for market makers (getting "picked off").
 
 **Summary**: By using the **Hub-and-Spoke (1 vs 100+) strategy**, you maximize the surface area for finding profit while the **Volatility Guard** and **Profit Thresholds** minimize the risk of losing money on bad trades.
 
+## Comparative Profitability Analysis
+
+Which strategy is the "most profitable" depends on your capital and risk tolerance:
+
+| Strategy | Profit Margin | Trade Frequency | Risk Level | Winner |
+| --- | --- | --- | --- | --- |
+| **RFQ Quoting** | Low (0.2% - 0.5%) | **Very High** | Very Low | **Volume Winner** |
+| **UniswapX Filling** | Moderate (0.5% - 1.0%) | Moderate | Low | **Efficiency Winner** |
+| **DEX-DEX Arbitrage** | **High (1.0% - 5.0%)** | Low | Moderate | **Alpha Winner** |
+
+### 1. The Volume Winner: RFQ Quoting
+This is typically the **most profitable in total dollars** because of the sheer number of requests. Aggregators like 1inch process billions in volume. Even a tiny 20 bps margin on 1,000 trades a day outperforms a single large arbitrage.
+
+### 2. The Alpha Winner: DEX-to-DEX Arbitrage
+This is the **most profitable per-trade**. Because you are capturing market inefficiencies that haven't been corrected yet, the spreads can be massive (sometimes 2-5% during high volatility). However, you are competing against other "MEV" bots, so you won't win every trade.
+
+### 3. The Balanced Choice: UniswapX Filling
+This sits in the middle. It's permissionless (unlike 1inch/ParaSwap) but has more consistent flow than pure arbitrage. It is the best place to start if you want to see immediate results without waiting for whitelisting.
+
+**Recommendation**: Start with **UniswapX Filling** to build your balance, then apply for **1inch/ParaSwap whitelisting** for consistent volume, and keep the **Arbitrage monitor** running in the background to catch "home run" trades.
+
 ## 2. CoW Swap Solver (Permissioned)
 CoW Swap uses "Solvers" to find the best execution for batches of orders.
 - **Edge**: You can use 0x to provide the liquidity needed to settle CoW Swap batches.
