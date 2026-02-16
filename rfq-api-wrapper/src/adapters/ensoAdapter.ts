@@ -35,7 +35,7 @@ export class EnsoAdapter extends BaseAdapter {
       chainId: validated.chainId,
     });
 
-    const amountWithSpread = await this.applySpread(zeroExPrice.buyAmount, validated.chainId, validated.toToken);
+    const amountWithSpread = await this.applySpread(zeroExPrice.buyAmount, zeroExPrice.sellAmount, validated.fromToken, validated.toToken, validated.chainId);
 
     return {
       amountOut: amountWithSpread,

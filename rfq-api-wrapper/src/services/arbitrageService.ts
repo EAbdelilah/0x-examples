@@ -44,30 +44,52 @@ export class ArbitrageService {
         functionName: 'token1',
       }) as string;
 
-      // Simple price check: How much token1 for 1 unit of token0?
-      // price = reserve1 / reserve0 (ignoring decimals for simplicity in this example)
-      const ammPrice = Number(reserve1) / Number(reserve0);
+      const decimals0 = await publicClient.readContract({
+        address: token0 as Hex,
+        abi: parseAbi(['function decimals() view returns (uint8)']),
+        functionName: 'decimals',
+      }) as number;
+
+      const decimals1 = await publicClient.readContract({
+        address: token1 as Hex,
+        abi: parseAbi(['function decimals() view returns (uint8)']),
+        functionName: 'decimals',
+      }) as number;
+
+      // Calculate AMM Price: How much token1 for 1 unit of token0?
+      // price = (reserve1 / 10^decimals1) / (reserve0 / 10^decimals0)
+      const ammPrice = (Number(reserve1) / 10**decimals1) / (Number(reserve0) / 10**decimals0);
 
       // Check 0x price for same direction
+      const sellAmount = (10n ** BigInt(decimals0)).toString(); // 1 unit of token0
       const zeroExPrice = await this.zeroExService.getPrice({
         sellToken: token0,
         buyToken: token1,
-        sellAmount: (10n ** 18n).toString(), // 1 unit
+        sellAmount,
         chainId,
       });
 
-      const zxPrice = Number(zeroExPrice.buyAmount) / 1e18;
+      const zxPrice = Number(zeroExPrice.buyAmount) / 10**decimals1;
 
-      logger.info(`Arbitrage Check: AMM=${ammPrice}, 0x=${zxPrice}`);
+      logger.info(`Arbitrage Check: AMM=${ammPrice.toFixed(6)}, 0x=${zxPrice.toFixed(6)}`);
 
       if (zxPrice > ammPrice * 1.01) { // 1% profit threshold
         logger.info(`🔥 Potential Arbitrage! Buy on AMM, Sell on 0x.`);
-        // To execute:
-        // 1. Flash loan token1 from Balancer using AtomicBroker
-        // 2. Swap token1 for token0 on AMM
-        // 3. Swap token0 for token1 on 0x
-        // 4. Repay flash loan
-        // 5. Keep profit
+
+        /**
+         * ZERO-CAPITAL EXECUTION FLOW:
+         * 1. Call AtomicBroker.execute(token1, amountToBorrow, params)
+         * 2. AtomicBroker triggers receiveFlashLoan() from Balancer Vault.
+         * 3. Inside receiveFlashLoan:
+         *    a. We now have 'amountToBorrow' of token1 (Flash Loaned).
+         *    b. Swap token1 -> token0 on the AMM (Uniswap V2).
+         *    c. Swap token0 -> token1 on 0x (using params.zeroExData).
+         *    d. Repay 'amountToBorrow' + fee back to Balancer.
+         *    e. Any surplus token1 is profit remaining in the contract.
+         *
+         * RESULT: You captured the price difference using Balancer's liquidity,
+         * only paying for the gas of this transaction.
+         */
       }
     } catch (error: any) {
       logger.error(`Error monitoring arbitrage on ${pairAddress}:`, error.message);

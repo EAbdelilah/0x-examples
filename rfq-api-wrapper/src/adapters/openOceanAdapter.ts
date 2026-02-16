@@ -28,7 +28,7 @@ export class OpenOceanAdapter extends BaseAdapter {
       chainId: validated.chainId,
     });
 
-    const amountWithSpread = await this.applySpread(zeroExPrice.buyAmount, validated.chainId, validated.outTokenAddress);
+    const amountWithSpread = await this.applySpread(zeroExPrice.buyAmount, zeroExPrice.sellAmount, validated.inTokenAddress, validated.outTokenAddress, validated.chainId);
 
     return {
       outAmount: amountWithSpread,

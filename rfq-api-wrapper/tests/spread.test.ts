@@ -8,8 +8,8 @@ class TestAdapter extends BaseAdapter {
     }
     async handleQuote(req: any) { return {}; }
     // Expose protected method for testing
-    public async testApplySpread(amount: string, chainId: number, token: string) {
-        return this.applySpread(amount, chainId, token);
+    public async testApplySpread(buyAmount: string, sellAmount: string, sellToken: string, buyToken: string, chainId: number) {
+        return this.applySpread(buyAmount, sellAmount, sellToken, buyToken, chainId);
     }
 }
 
@@ -23,16 +23,16 @@ describe('Spread Logic', () => {
         const adapter = new TestAdapter({} as any);
 
         // 1000 - 0.5% = 995
-        expect(await adapter.testApplySpread('1000', 1, '0x123')).toBe('995');
+        expect(await adapter.testApplySpread('1000', '1000', '0xabc', '0x123', 1)).toBe('995');
 
         process.env.SPREAD_BPS = '100'; // 1%
         const adapter2 = new TestAdapter({} as any);
-        expect(await adapter2.testApplySpread('1000', 1, '0x456')).toBe('990');
+        expect(await adapter2.testApplySpread('1000', '1000', '0xabc', '0x456', 1)).toBe('990');
     });
 
     it('should handle zero spread', async () => {
         process.env.SPREAD_BPS = '0';
         const adapter = new TestAdapter({} as any);
-        expect(await adapter.testApplySpread('1000', 1, '0x789')).toBe('1000');
+        expect(await adapter.testApplySpread('1000', '1000', '0xabc', '0x789', 1)).toBe('1000');
     });
 });

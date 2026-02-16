@@ -19,6 +19,7 @@ describe('ParaSwapAdapter', () => {
   it('should handle indicative quote', async () => {
     mockZeroExService.getPrice.mockResolvedValue({
       buyAmount: '3000',
+      sellAmount: '1000',
     });
 
     const query = {
@@ -36,6 +37,7 @@ describe('ParaSwapAdapter', () => {
   it('should handle firm quote and sign it', async () => {
     mockZeroExService.getPrice.mockResolvedValue({
       buyAmount: '3000',
+      sellAmount: '1000',
     });
 
     const query = {

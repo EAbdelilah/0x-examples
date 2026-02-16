@@ -4,16 +4,21 @@ Your Atomic Broker is a powerful tool that combines **Flash Loans** (via Balance
 
 Here are several ways to expand your operations:
 
-## 1. DEX-to-DEX Arbitrage
+## 1. DEX-to-DEX Arbitrage (Zero-Capital)
 The most common use for an atomic broker is capturing price discrepancies between 0x (which aggregates many sources) and a specific AMM (like Uniswap V2, V3, or Aerodrome).
 
-**How it works**:
+### How it works (Zero Upfront Capital):
+This strategy uses **Flash Loans**, which allow you to borrow millions of dollars in liquidity for the duration of a single transaction, as long as you pay it back by the end of that same transaction.
+
 1.  **Monitor**: Use `ArbitrageService.ts` to track price differences.
-2.  **Flash Loan**: Borrow the "buy" token from Balancer.
-3.  **Swap A**: Execute a swap on the cheaper DEX (e.g., Uniswap V2).
-4.  **Swap B**: Execute the reverse swap on the more expensive DEX (e.g., 0x).
-5.  **Repay**: Pay back the flash loan to Balancer.
-6.  **Profit**: Keep the remaining tokens in the `AtomicBroker` contract.
+2.  **Trigger**: When a 1%+ discrepancy is found, your bot calls `AtomicBroker.execute()`.
+3.  **Flash Loan**: The broker borrows the required tokens (e.g., 100,000 USDC) from Balancer's Vault. **Cost: $0 upfront.**
+4.  **Swap A**: The broker swaps that 100,000 USDC on Uniswap V2 for 40 ETH (where ETH is currently "cheap").
+5.  **Swap B**: The broker swaps the 40 ETH on 0x for 102,000 USDC (where ETH is "expensive").
+6.  **Repay**: The broker automatically repays the 100,000 USDC + a tiny flash loan fee to Balancer.
+7.  **Profit**: The remaining **~2,000 USDC** is sent to your wallet.
+
+**The Bottom Line**: You only pay the **gas fee** to submit the transaction. You never need to actually own the 100,000 USDC used for the trade.
 
 ## 2. CoW Swap Solver (Permissioned)
 CoW Swap uses "Solvers" to find the best execution for batches of orders.

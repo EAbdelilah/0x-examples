@@ -189,11 +189,13 @@ export class FillerService {
       const gasCost = estimatedGas * gasPrice;
 
       // 4. Profitability
-      const spreadBps = await spreadService.getEffectiveSpread(chainId, buyToken);
+      const pairKey = `${sellToken.toLowerCase()}-${buyToken.toLowerCase()}`;
+      const spreadBps = await spreadService.getEffectiveSpread(chainId, pairKey);
       const requiredOutput = (currentAuctionOutput * (10000n + BigInt(spreadBps))) / 10000n;
 
       // Track price for volatility guard
-      await spreadService.trackPrice(chainId, buyToken, zeroExPrice.buyAmount);
+      const priceRatio = (BigInt(zeroExPrice.buyAmount) * BigInt(1e18)) / BigInt(zeroExPrice.sellAmount);
+      await spreadService.trackPrice(chainId, pairKey, priceRatio.toString());
 
       // Normalization for comparison
       const decimals = await this.getTokenDecimals(buyToken, chainId);

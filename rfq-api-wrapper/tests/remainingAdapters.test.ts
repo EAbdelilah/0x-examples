@@ -16,7 +16,7 @@ describe('Enso and OpenOcean Adapters', () => {
 
   it('EnsoAdapter should handle quote request', async () => {
     const adapter = new EnsoAdapter(mockZeroExService);
-    mockZeroExService.getPrice.mockResolvedValue({ buyAmount: '1000' });
+    mockZeroExService.getPrice.mockResolvedValue({ buyAmount: '1000', sellAmount: '500' });
 
     const query = {
       fromToken: '0x123',
@@ -36,7 +36,7 @@ describe('Enso and OpenOcean Adapters', () => {
 
   it('OpenOceanAdapter should handle quote request', async () => {
     const adapter = new OpenOceanAdapter(mockZeroExService);
-    mockZeroExService.getPrice.mockResolvedValue({ buyAmount: '2000' });
+    mockZeroExService.getPrice.mockResolvedValue({ buyAmount: '2000', sellAmount: '1000' });
 
     const query = {
       inTokenAddress: '0xabc',

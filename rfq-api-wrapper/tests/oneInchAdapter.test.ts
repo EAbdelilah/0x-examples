@@ -20,6 +20,7 @@ describe('OneInchAdapter', () => {
   it('should handle quote request and generate a signature', async () => {
     mockZeroExService.getPrice.mockResolvedValue({
       buyAmount: '2000',
+      sellAmount: '1000',
     });
 
     const query = {

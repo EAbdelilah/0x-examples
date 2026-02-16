@@ -18,13 +18,21 @@ export abstract class BaseAdapter implements AggregatorAdapter {
    * Applies the configured spread to the 0x buyAmount.
    * Returns the amount to be quoted to the user.
    */
-  protected async applySpread(buyAmount: string, chainId: number, buyToken: string): Promise<string> {
+  protected async applySpread(buyAmount: string, sellAmount: string, sellToken: string, buyToken: string, chainId: number): Promise<string> {
     const amount = BigInt(buyAmount);
+    const sell = BigInt(sellAmount);
 
-    // Track price for volatility guard
-    await spreadService.trackPrice(chainId, buyToken, buyAmount);
+    // Track volatility per unique token pair
+    const pairKey = `${sellToken.toLowerCase()}-${buyToken.toLowerCase()}`;
 
-    const spreadBps = await spreadService.getEffectiveSpread(chainId, buyToken);
+    if (sell > 0n) {
+        // Calculate a price ratio (using 18 decimals of precision) to track volatility
+        // This represents how many units of buyToken per unit of sellToken
+        const priceRatio = (amount * BigInt(1e18)) / sell;
+        await spreadService.trackPrice(chainId, pairKey, priceRatio.toString());
+    }
+
+    const spreadBps = await spreadService.getEffectiveSpread(chainId, pairKey);
     const multiplier = BigInt(10000 - spreadBps);
     const result = (amount * multiplier) / 10000n;
     return result.toString();

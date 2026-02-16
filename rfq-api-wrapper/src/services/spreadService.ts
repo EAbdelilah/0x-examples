@@ -28,10 +28,11 @@ export class SpreadService {
   }
 
   /**
-   * Tracks a new price point for a token.
+   * Tracks a new price point for a token pair or individual token.
+   * Price should be normalized (e.g., amount of buyToken per 1 unit of sellToken).
    */
-  async trackPrice(chainId: number, tokenAddress: string, priceInNative: string) {
-    dbService.savePrice(chainId, tokenAddress, priceInNative);
+  async trackPrice(chainId: number, tokenAddress: string, price: string) {
+    dbService.savePrice(chainId, tokenAddress, price);
   }
 
   /**
