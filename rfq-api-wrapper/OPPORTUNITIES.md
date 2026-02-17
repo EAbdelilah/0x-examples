@@ -77,6 +77,26 @@ This sits in the middle. It's permissionless (unlike 1inch/ParaSwap) but has mor
 
 **Recommendation**: Start with **UniswapX Filling** to build your balance, then apply for **1inch/ParaSwap whitelisting** for consistent volume, and keep the **Arbitrage monitor** running in the background to catch "home run" trades.
 
+## High-Alpha Arbitrage Chains (2025 Edition)
+
+Not all blockchains are created equal for arbitrage. To maximize profit, you should target chains where **liquidity is fragmented** and **execution is fast/cheap**.
+
+### 1. The High-Volume King: Base
+- **Why**: Base is currently the fastest-growing L2. Many retail users swap new tokens on Aerodrome or Uniswap V3 without checking other prices.
+- **The Edge**: High "Retail Flow" which is often price-insensitive. 0x's deep aggregation on Base can easily beat single-pool prices.
+
+### 2. The Next Frontier: Berachain
+- **Why**: Its unique **Proof of Liquidity (PoL)** consensus mechanism creates massive incentives for deep liquidity in specific pools.
+- **The Edge**: Liquidity is often "locked" into PoL-eligible pools, creating significant price lags in non-incentivized pools (Sushiswap, etc.) that you can exploit.
+
+### 3. The Latency Game: Monad
+- **Why**: Monad features parallel execution and 10,000+ TPS.
+- **The Edge**: Because Monad is ultra-fast, "Price Discovery" happens in milliseconds. A bot using 0x to bridge liquidity across Monad's parallel DEXs will have a massive speed advantage over manual traders or slower bots.
+
+### 4. The Incentive Engines: Mantle & Linea
+- **Why**: These chains often have "Points" or "Airdrop" programs that force users to use specific (often inefficient) DEXs to earn rewards.
+- **The Edge**: Users will intentionally use a worse-priced DEX to earn points. You can be the "Atomic Broker" that provides that liquidity via 0x and captures the 1-2% price difference as pure profit.
+
 ## 2. CoW Swap Solver (Permissioned)
 CoW Swap uses "Solvers" to find the best execution for batches of orders.
 - **Edge**: You can use 0x to provide the liquidity needed to settle CoW Swap batches.
