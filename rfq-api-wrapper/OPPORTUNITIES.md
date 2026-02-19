@@ -168,6 +168,17 @@ You can expand this by mirroring liquidity from Centralized Exchanges (CEX) like
 
 ---
 
+## Production Readiness Checklist
+
+Before moving from simulation to live trading, ensure you have completed these steps:
+
+1.  **Deploy AtomicBroker**: Deploy `AtomicBroker.sol` on your target chains (Base, Polygon, etc.) and update `src/config/chains.ts` with the addresses.
+2.  **Private RPCs**: Secure Private RPC endpoints (Flashbots, bloXroute, etc.) for every chain to prevent MEV front-running. Update `RPC_URL_X` in `.env`.
+3.  **Token Approvals**: Run `bun run approve` (or equivalent script) to ensure the `AtomicBroker` has permission to swap the tokens you are monitoring.
+4.  **Fund Gas**: Ensure your `MM_ADDRESS` has enough native tokens (ETH/MATIC) to pay for transaction gas fees.
+5.  **Whitelisting**: (For RFQ) Apply for PMM whitelisting on 1inch and ParaSwap using your server's IP and `MM_ADDRESS`.
+6.  **Verify Logic**: Run `bun run simulate` one last time to confirm all profitability math is correct for your specific chain/pair.
+
 ## Technical Next Steps
 
 1.  **Deploy AtomicBroker**: Ensure you have deployed the `AtomicBroker.sol` contract on your target chain (e.g., Base, Polygon).
