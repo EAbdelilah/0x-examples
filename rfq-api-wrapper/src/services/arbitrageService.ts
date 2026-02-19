@@ -24,6 +24,11 @@ export class ArbitrageService {
    * By checking many individual pools against the 0x Aggregator (100+ sources),
    * we effectively scan the entire market for price discrepancies.
    */
+  /**
+   * Monitors multiple DEX pools simultaneously.
+   * PRO TIP: To prevent front-running by MEV bots, use a Private RPC (e.g. Flashbots)
+   * in your environment configuration (RPC_URL_1, RPC_URL_8453, etc).
+   */
   async monitorMultiplePools(pools: { chainId: number, address: string, dexName: string, version?: 'v2' | 'v3' }[]) {
     logger.info(`Scanning ${pools.length} pools across multiple DEXs for arbitrage...`);
 

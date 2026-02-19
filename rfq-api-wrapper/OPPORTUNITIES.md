@@ -56,6 +56,25 @@ High volatility is the biggest risk for market makers (getting "picked off").
 
 **Summary**: By using the **Hub-and-Spoke (1 vs 100+) strategy**, you maximize the surface area for finding profit while the **Volatility Guard** and **Profit Thresholds** minimize the risk of losing money on bad trades.
 
+## MEV Protection & Execution Safety
+
+Arbitrage and "Filling" are highly competitive. Sophisticated **MEV (Miner Extractable Value)** bots constantly scan the public mempool to "front-run" your profitable trades. This project uses two layers of protection to secure your bot:
+
+### 1. Architectural Safety (The Atomic Revert)
+The `AtomicBroker` uses **Atomic Execution**. Your entire trade (Flash Loan -> Swap A -> Swap B -> Repay) happens in a single transaction.
+- **The Scenario**: An MEV bot sees your transaction and front-runs you, taking the arbitrage profit first.
+- **The Defense**: When your transaction executes, the price on the DEX will have changed. Your `AtomicBroker` will detect that it cannot meet the `minBuyAmount` or that the `zeroExData` call failed.
+- **The Result**: The transaction **reverts immediately**. You never lose your capital. The only thing you lose is the gas fee.
+
+### 2. Network Safety (Private RPCs)
+To prevent MEV bots from even *seeing* your transaction in the public mempool, you should use a **Private RPC (MEV-Boost)**.
+- **Flashbots (Ethereum)**: Sends your transaction directly to miners, bypassing the public mempool.
+- **MEV-Share / BloXroute**: Similar services that provide "Front-running protection."
+- **How to Use**: Replace your `RPC_URL` in `.env` with a private endpoint from [Flashbots](https://docs.flashbots.net/) or [bloXroute](https://bloxroute.com/).
+
+### 3. L2 Advantage (Base / Polygon)
+On L2s like **Base**, there is a "Sequencer" that typically processes transactions in a first-come-first-served (FCFS) manner. While "Soft-MEV" still exists, it is significantly harder for a bot to "sandwich" your trade compared to Ethereum Mainnet.
+
 ## Comparative Profitability Analysis
 
 Which strategy is the "most profitable" depends on your capital and risk tolerance:

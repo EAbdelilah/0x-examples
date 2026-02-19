@@ -81,6 +81,11 @@ export class FillerService {
     }
   }
 
+  /**
+   * Monitors UniswapX auctions.
+   * NOTE: It is highly recommended to use a Private RPC (like Flashbots)
+   * to submit fills to prevent MEV bots from front-running your profitable fills.
+   */
   async monitorUniswapX(chainId: number) {
     if (!this.account) {
       logger.warn('No private key configured. Filler running in Read-only mode.');
