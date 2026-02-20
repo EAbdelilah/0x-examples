@@ -9,6 +9,7 @@
     "maker": "npx tsx src/maker.ts",
     "filler": "npx tsx src/filler.ts",
     "verify": "npx tsx src/verify-setup.ts",
+    "bot": "npx tsx src/run-bot.ts",
     "dev": "npx tsx --watch src/index.ts",
     "test": "vitest",
     "lint": "tsc --noEmit"

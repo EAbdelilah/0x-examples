@@ -86,7 +86,13 @@ bun run maker
 
 # Run the UniswapX Filler Bot
 bun run filler
+
+# Run Advanced Strategy Bots (Spatial Arb, Liquidation, etc.)
+# Usage: bun run bot <strategy> <chainId>
+bun run bot spatial 8453
 ```
+
+For more details on available bots, see [docs/BOTS.md](./docs/BOTS.md).
 
 ### Running Tests
 
