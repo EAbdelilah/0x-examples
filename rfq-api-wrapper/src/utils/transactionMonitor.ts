@@ -1,0 +1,32 @@
+import logger from './logger';
+import { PublicClient, Hex } from 'viem';
+
+export class TransactionMonitor {
+  constructor(private publicClient: PublicClient) {}
+
+  async waitForConfirmation(txHash: Hex, strategy: string) {
+    logger.info(`[${strategy}] Monitoring transaction: ${txHash}`);
+
+    try {
+      const receipt = await this.publicClient.waitForTransactionReceipt({
+        hash: txHash,
+        confirmations: 1,
+        timeout: 60_000, // 60 seconds timeout
+      });
+
+      if (receipt.status === 'success') {
+        logger.info(`[${strategy}] ✅ Transaction Confirmed in block ${receipt.blockNumber}`);
+      } else {
+        logger.error(`[${strategy}] ❌ Transaction Reverted in block ${receipt.blockNumber}`);
+      }
+      return receipt;
+    } catch (error: any) {
+      if (error.name === 'TransactionNotFoundError') {
+        logger.warn(`[${strategy}] ⚠️ Transaction not found. It might have been dropped.`);
+      } else {
+        logger.error(`[${strategy}] ❌ Monitoring failed: ${error.message}`);
+      }
+      return null;
+    }
+  }
+}

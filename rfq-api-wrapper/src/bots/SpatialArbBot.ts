@@ -35,8 +35,16 @@ export class SpatialArbBot extends BaseBot {
         this.logOpportunity('SpatialArb', `Gap: ${formatUnits(profit, 6)} USDC`, isProfitable);
 
         if (isProfitable && await this.checkGas()) {
-          logger.info('🚀 Triggering Spatial Arb Execution via AtomicBroker...');
-          // Implementation: Call AtomicBroker.executeBalancer with flash loan
+          const isSafe = await this.checkSafety(BigInt(zeroExQuote.sellAmount), BigInt(zeroExQuote.buyAmount));
+
+          if (isSafe) {
+            if (this.isDryRun) {
+              logger.info('🚀 [DRY RUN] Would trigger Spatial Arb Execution via AtomicBroker');
+            } else {
+              logger.info('🚀 Triggering Spatial Arb Execution via AtomicBroker...');
+              // Implementation: Call AtomicBroker.executeBalancer with flash loan
+            }
+          }
         }
 
         await new Promise(resolve => setTimeout(resolve, 10000)); // Scan every 10s

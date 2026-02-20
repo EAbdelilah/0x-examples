@@ -33,7 +33,15 @@ export class LiquidationBot extends BaseBot {
         this.logOpportunity('Liquidation', `Bonus: ${formatUnits(profit, 18)} units`, isProfitable);
 
         if (isProfitable && await this.checkGas()) {
-          logger.info('🚀 Executing Liquidation via AtomicBroker + Flash Loan...');
+          const isSafe = await this.checkSafety(debtToCover, BigInt(zeroExQuote.buyAmount), 50); // 50 bps min profit for liquidation
+
+          if (isSafe) {
+            if (this.isDryRun) {
+              logger.info('🚀 [DRY RUN] Would execute Liquidation via AtomicBroker + Flash Loan');
+            } else {
+              logger.info('🚀 Executing Liquidation via AtomicBroker + Flash Loan...');
+            }
+          }
         }
 
         await new Promise(resolve => setTimeout(resolve, 15000));
