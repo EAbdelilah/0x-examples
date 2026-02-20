@@ -34,6 +34,10 @@ export class NotificationService {
     async notifyError(task: string, error: string) {
         await this.send(`⚠️ **Bot Error Alert**\nTask: ${task}\nError: ${error}`);
     }
+
+    async notifyOpportunity(strategy: string, profit: string) {
+        await this.send(`🔥 **High Alpha Opportunity!**\nStrategy: ${strategy}\nEst. Profit: ${profit}`);
+    }
 }
 
 export const notifier = new NotificationService();

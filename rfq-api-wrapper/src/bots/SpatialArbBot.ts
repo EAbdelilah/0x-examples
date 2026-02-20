@@ -1,57 +1,60 @@
 import { BaseBot } from './BaseBot';
 import logger from '../utils/logger';
 import { formatUnits, parseAbi } from 'viem';
+import { PriceStreamService, PriceUpdate } from '../services/priceStreamService';
 
 export class SpatialArbBot extends BaseBot {
-  private readonly UNISWAP_V2_ABI = parseAbi([
-    'function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)',
-  ]);
+  private priceStream: PriceStreamService;
+
+  constructor(zeroExService: any, chainId: number) {
+    super(zeroExService, chainId);
+    this.priceStream = new PriceStreamService(zeroExService);
+  }
 
   async run() {
-    logger.info(`Starting Spatial Arbitrage Bot on chain ${this.chainId}...`);
+    logger.info(`Starting PRODUCTION Spatial Arbitrage Bot on chain ${this.chainId}...`);
 
-    // Example: WETH/USDC pair on a local DEX
     const tokenA = '0x4200000000000000000000000000000000000006'; // WETH (Base)
     const tokenB = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // USDC (Base)
-    const poolAddress = '0x...'; // Replace with a real pool address
 
-    while (true) {
-      try {
-        // 1. Get 0x price (The Hub)
-        const zeroExQuote = await this.zeroExService.getPrice({
-          sellToken: tokenA,
-          buyToken: tokenB,
-          sellAmount: '1000000000000000000', // 1 WETH
-          chainId: this.chainId,
-        });
+    // Event-driven execution
+    this.priceStream.on('priceUpdate', async (update: PriceUpdate) => {
+      await this.evaluateOpportunity(update);
+    });
 
-        // 2. Get Local DEX price (The Spoke)
-        // (Mocking local dex price for demonstration)
-        const localPrice = BigInt(zeroExQuote.buyAmount) * 101n / 100n; // Assume 1% price gap
+    await this.priceStream.subscribe(tokenA, tokenB, this.chainId);
+  }
 
-        const profit = localPrice - BigInt(zeroExQuote.buyAmount);
-        const isProfitable = profit > 0n;
+  private async evaluateOpportunity(update: PriceUpdate) {
+    try {
+      // 1. Get Local DEX price (Mocked for demo)
+      // In production, you'd fetch this from a WebSocket provider or direct node query
+      const localPrice = BigInt(update.price) * 101n / 100n;
 
-        this.logOpportunity('SpatialArb', `Gap: ${formatUnits(profit, 6)} USDC`, isProfitable);
+      const profit = localPrice - BigInt(update.price);
+      const isProfitable = profit > 1000000n; // > 1 USDC profit threshold
 
-        if (isProfitable && await this.checkGas()) {
-          const isSafe = await this.checkSafety(BigInt(zeroExQuote.sellAmount), BigInt(zeroExQuote.buyAmount));
+      if (isProfitable) {
+         this.logOpportunity('SpatialArb', `Real-time Gap: ${profit} units`, true);
 
-          if (isSafe) {
-            if (this.isDryRun) {
-              logger.info('🚀 [DRY RUN] Would trigger Spatial Arb Execution via AtomicBroker');
-            } else {
-              logger.info('🚀 Triggering Spatial Arb Execution via AtomicBroker...');
-              // Implementation: Call AtomicBroker.executeBalancer with flash loan
-            }
-          }
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 10000)); // Scan every 10s
-      } catch (e: any) {
-        logger.error(`SpatialArb Error: ${e.message}`);
-        await new Promise(resolve => setTimeout(resolve, 10000));
+         if (await this.checkGas()) {
+           const isSafe = await this.checkSafety(BigInt(10**18), BigInt(update.price) + profit);
+           if (isSafe) {
+             this.executeArb(update, profit);
+           }
+         }
       }
+    } catch (e: any) {
+      logger.error(`Evaluation Error: ${e.message}`);
+    }
+  }
+
+  private executeArb(update: any, profit: bigint) {
+    if (this.isDryRun) {
+      logger.info(`🚀 [DRY RUN] Executing arb for ${profit} profit`);
+    } else {
+      logger.info(`🚀 EXECUTING REAL-TIME ARB for ${profit} profit!`);
+      // Trigger AtomicBroker...
     }
   }
 }

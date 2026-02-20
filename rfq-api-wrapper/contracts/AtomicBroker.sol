@@ -68,6 +68,9 @@ contract AtomicBroker is Ownable {
     IPoolManager public poolManager;
     address public immutable zeroExProxy;
 
+    event StrategyExecuted(address indexed token, uint256 amount, uint256 profit);
+    event FlashLoanReceived(address indexed provider, address token, uint256 amount);
+
     constructor(address _vault, address _zeroExProxy) Ownable(msg.sender) {
         vault = IBalancerVault(_vault);
         zeroExProxy = _zeroExProxy;
@@ -190,6 +193,8 @@ contract AtomicBroker is Ownable {
         if (profit > 0) {
             IERC20(params.buyToken).transfer(owner(), profit);
         }
+
+        emit StrategyExecuted(params.buyToken, amount, profit);
     }
 
     // Function to withdraw any stuck tokens
