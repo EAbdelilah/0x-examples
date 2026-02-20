@@ -25,7 +25,9 @@ const REACTOR_ABI = parseAbi([
 ]);
 
 const BROKER_ABI = parseAbi([
-  'function execute(address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
+  'function executeBalancer(address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
+  'function executeSky(address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
+  'function executeMorpho(address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
 ]);
 
 export class FillerService {
@@ -286,11 +288,17 @@ export class FillerService {
         ]
       );
 
-      // 3. Call AtomicBroker.execute
+      // 3. Call AtomicBroker.executeBalancer (or executeSky/executeMorpho depending on the token and strategy)
+      // Strategy Decision: If borrowing USDS/DAI, use executeSky for 0% fee and deep liquidity.
+      const functionName = order.input.token.toLowerCase() === CHAINS[chainId].tokens['USDC']?.toLowerCase() ||
+                           order.input.token.toLowerCase() === CHAINS[chainId].tokens['DAI']?.toLowerCase()
+        ? 'executeSky'
+        : 'executeBalancer';
+
       const txHash = await walletClient.writeContract({
         address: brokerAddress,
         abi: BROKER_ABI,
-        functionName: 'execute',
+        functionName: functionName as any,
         args: [
           order.input.token as Hex,
           BigInt(order.input.amount),
