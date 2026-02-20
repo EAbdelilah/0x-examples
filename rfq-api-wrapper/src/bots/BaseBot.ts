@@ -30,6 +30,10 @@ export abstract class BaseBot {
 
   abstract run(): Promise<void>;
 
+  async stop() {
+    logger.info(`Stopping bot on chain ${this.chainId}...`);
+  }
+
   protected async checkGas(): Promise<boolean> {
     if (!this.account) return false;
     const balance = await this.publicClient.getBalance({ address: this.account.address });

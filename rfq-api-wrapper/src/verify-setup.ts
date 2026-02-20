@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { ZeroExService } from './services/zeroExService';
 import { privateKeyToAccount } from 'viem/accounts';
-import { Hex } from 'viem';
+import { Hex, createPublicClient, http } from 'viem';
 import logger from './utils/logger';
 import { CHAINS } from './config/chains';
 
@@ -42,7 +42,25 @@ async function verify() {
 
     for (const chain of chainsToTest) {
         try {
-            // Test WETH -> USDC for each chain
+            // 1. Test RPC Latency
+            const rpcUrl = process.env[`RPC_URL_${chain.chainId}`] || process.env.RPC_URL;
+            if (rpcUrl) {
+                const client = createPublicClient({ transport: http(rpcUrl) });
+                const start = Date.now();
+                await client.getBlockNumber();
+                const latency = Date.now() - start;
+
+                const isPrivate = rpcUrl.includes('flashbots') || rpcUrl.includes('mev') || rpcUrl.includes('protect');
+                const privateStatus = isPrivate ? ' [PRIVATE]' : ' [PUBLIC]';
+
+                logger.info(`✅ RPC Connectivity: ${chain.name} | Latency: ${latency}ms${privateStatus}`);
+
+                if (latency > 500) {
+                    logger.warn(`⚠️ High RPC latency for ${chain.name}. Execution may be slow.`);
+                }
+            }
+
+            // 2. Test 0x API
             const sellToken = chain.tokens.WETH || chain.tokens.weth;
             const buyToken = chain.tokens.USDC || chain.tokens.usdc;
 

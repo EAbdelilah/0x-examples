@@ -41,7 +41,35 @@ export class DatabaseService {
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+        this.db.exec(`
+      CREATE TABLE IF NOT EXISTS profits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        strategy TEXT,
+        chainId INTEGER,
+        token TEXT,
+        amount TEXT,
+        txHash TEXT UNIQUE,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
         logger.info('Database initialized at bot_data.db');
+    }
+
+    trackProfit(strategy: string, chainId: number, token: string, amount: string, txHash: string) {
+        const stmt = this.db.prepare(`
+      INSERT OR IGNORE INTO profits (strategy, chainId, token, amount, txHash)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+        stmt.run(strategy, chainId, token, amount, txHash);
+    }
+
+    getTotalProfit(strategy?: string) {
+        if (strategy) {
+            const stmt = this.db.prepare('SELECT SUM(CAST(amount AS REAL)) as total FROM profits WHERE strategy = ?');
+            return stmt.get(strategy);
+        }
+        const stmt = this.db.prepare('SELECT SUM(CAST(amount AS REAL)) as total FROM profits');
+        return stmt.get();
     }
 
     saveOrder(order: PersistedOrder) {

@@ -11,6 +11,11 @@ export class SpatialArbBot extends BaseBot {
     this.priceStream = new PriceStreamService(zeroExService);
   }
 
+  async stop() {
+    logger.info('Stopping SpatialArbBot price stream...');
+    this.priceStream.stop();
+  }
+
   async run() {
     logger.info(`Starting PRODUCTION Spatial Arbitrage Bot on chain ${this.chainId}...`);
 

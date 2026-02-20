@@ -100,6 +100,31 @@ For more details on available bots, see [docs/BOTS.md](./docs/BOTS.md).
 bun run test
 ```
 
+## 🚀 Production Deployment
+
+To run this suite in a professional environment:
+
+1. **Verify Environment**:
+   ```bash
+   bun run verify
+   ```
+   *Ensure latency is < 200ms and you are using a Private RPC.*
+
+2. **Dry Run (Testing Phase)**:
+   ```bash
+   DRY_RUN=true bun run bot spatial 8453
+   ```
+
+3. **Live Execution (with Docker)**:
+   ```bash
+   docker-compose up -d arb-bot mirror-bot
+   ```
+
+4. **Monitor PnL**:
+   All profits and execution history are persisted in `bot_data.db`. High-alpha opportunities are pushed to your `NOTIFICATION_WEBHOOK_URL`.
+
+---
+
 ## How it Works
 
 1. **Aggregator Call**: An aggregator (e.g., 1inch) sends a GET request to your endpoint (e.g., `/quote/1inch`).

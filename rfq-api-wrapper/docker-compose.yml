@@ -20,3 +20,21 @@ services:
     env_file: .env
     restart: always
     command: ["bun", "run", "filler"]
+
+  arb-bot:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    command: ["bun", "run", "bot", "spatial", "8453"]
+
+  liquidation-bot:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    command: ["bun", "run", "bot", "liquidate", "8453"]
+
+  mirror-bot:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    command: ["bun", "run", "bot", "mirror", "8453"]

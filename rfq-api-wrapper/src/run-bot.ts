@@ -40,6 +40,18 @@ async function main() {
       process.exit(1);
   }
 
+  process.on('SIGINT', async () => {
+    logger.info('Caught interrupt signal (SIGINT)');
+    if (bot) await bot.stop();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    logger.info('Caught termination signal (SIGTERM)');
+    if (bot) await bot.stop();
+    process.exit(0);
+  });
+
   await bot.run();
 }
 
