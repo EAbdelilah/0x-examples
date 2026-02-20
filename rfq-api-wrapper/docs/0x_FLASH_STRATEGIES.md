@@ -25,7 +25,7 @@ This document evaluates the 12 major flash loan strategies and the 9 zero-percen
 
 ## Part 2: 0% Flash Loan Providers vs. 0x
 
-To execute the strategies above with 0x, you need capital. These 9 providers offer **0% fee** capital.
+To execute the strategies above with 0x, you need capital. These 10 providers offer **0% fee** capital.
 
 ### 1. Balancer (V2/V3) - *The Universal Choice*
 - **Best for**: Spatial Arbitrage & Mirroring.
@@ -65,6 +65,10 @@ To execute the strategies above with 0x, you need capital. These 9 providers off
 - **Best for**: Peg Stability Arb.
 - **0x Integration**: Borrow at 0% from a Silo, use 0x to trade against a peg (e.g., wstETH/ETH), and profit from the restoration of the peg.
 
+### 10. Uniswap v4 - *The Singleton Flash*
+- **Best for**: Complex, multi-hop arbitrage.
+- **0x Integration**: Uses "Flash Accounting" (Lock/Unlock). You "unlock" the singleton, take tokens, execute 0x swaps, and settle the delta. Since Uniswap v4 is a single contract, flash loaning is extremely gas-efficient and 0% fee.
+
 ---
 
 ## Part 3: The "Alpha" Recommendation
@@ -93,6 +97,7 @@ By using **Balancer, Sky, or Morpho**, your cost of capital is **0%**, allowing 
 | :--- | :--- | :--- | :--- |
 | **Balancer** | 0x Mirroring | 210,000 | 0% |
 | **Sky** | 0x Liquidation | 195,000 | 0% |
+| **Uniswap v4** | 0x Mirroring | 185,000 | 0% |
 | **Aave V3** | 0x Mirroring | 280,000 | 0.09% |
 | **Uniswap V3**| 0x Spatial Arb | 310,000 | 0.30% |
 

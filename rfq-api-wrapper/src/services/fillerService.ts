@@ -28,6 +28,7 @@ const BROKER_ABI = parseAbi([
   'function executeBalancer(address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
   'function executeSky(address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
   'function executeMorpho(address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
+  'function executeUniV4(bytes params) external',
 ]);
 
 export class FillerService {
@@ -288,22 +289,24 @@ export class FillerService {
         ]
       );
 
-      // 3. Call AtomicBroker.executeBalancer (or executeSky/executeMorpho depending on the token and strategy)
-      // Strategy Decision: If borrowing USDS/DAI, use executeSky for 0% fee and deep liquidity.
-      const functionName = order.input.token.toLowerCase() === CHAINS[chainId].tokens['USDC']?.toLowerCase() ||
-                           order.input.token.toLowerCase() === CHAINS[chainId].tokens['DAI']?.toLowerCase()
-        ? 'executeSky'
-        : 'executeBalancer';
+      // 3. Call AtomicBroker.executeBalancer (or executeSky/executeMorpho/executeUniV4 depending on the token and strategy)
+      // Strategy Decision: If borrowing USDS/DAI, use executeSky. If on a chain with Uni v4, consider executeUniV4.
+      let functionName = 'executeBalancer';
+      let args: any[] = [order.input.token as Hex, BigInt(order.input.amount), encodedParams];
+
+      if (order.input.token.toLowerCase() === CHAINS[chainId].tokens['USDC']?.toLowerCase() ||
+          order.input.token.toLowerCase() === CHAINS[chainId].tokens['DAI']?.toLowerCase()) {
+        functionName = 'executeSky';
+      } else if (CHAINS[chainId].name.includes('Uniswap v4 Support')) { // Hypothetical check
+        functionName = 'executeUniV4';
+        args = [encodedParams];
+      }
 
       const txHash = await walletClient.writeContract({
         address: brokerAddress,
         abi: BROKER_ABI,
         functionName: functionName as any,
-        args: [
-          order.input.token as Hex,
-          BigInt(order.input.amount),
-          encodedParams
-        ],
+        args,
         chain: publicClient.chain,
       });
 

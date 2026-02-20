@@ -47,6 +47,10 @@ interface IMorphoBlue {
     ) external;
 }
 
+interface IPoolManager {
+    function unlock(bytes calldata data) external returns (bytes memory);
+}
+
 interface IZeroEx {
     function transformERC20(
         IERC20 inputToken,
@@ -61,6 +65,7 @@ contract AtomicBroker is Ownable {
     IBalancerVault public immutable vault;
     ISkyFlashMint public skyFlash;
     IMorphoBlue public morpho;
+    IPoolManager public poolManager;
     address public immutable zeroExProxy;
 
     constructor(address _vault, address _zeroExProxy) Ownable(msg.sender) {
@@ -68,9 +73,10 @@ contract AtomicBroker is Ownable {
         zeroExProxy = _zeroExProxy;
     }
 
-    function setProviders(address _sky, address _morpho) external onlyOwner {
+    function setProviders(address _sky, address _morpho, address _uniV4) external onlyOwner {
         skyFlash = ISkyFlashMint(_sky);
         morpho = IMorphoBlue(_morpho);
+        poolManager = IPoolManager(_uniV4);
     }
 
     struct FlashParams {
@@ -112,6 +118,10 @@ contract AtomicBroker is Ownable {
         morpho.flashLoan(tokenToBorrow, amountToBorrow, params);
     }
 
+    function executeUniV4(bytes calldata params) external onlyOwner {
+        poolManager.unlock(params);
+    }
+
     function receiveFlashLoan(
         address[] memory tokens,
         uint256[] memory amounts,
@@ -139,6 +149,16 @@ contract AtomicBroker is Ownable {
         // For Morpho, the token is passed in data or we assume it's the one currently being handled
         FlashParams memory params = abi.decode(data, (FlashParams));
         _executeStrategy(params.sellToken, assets, 0, data);
+    }
+
+    function unlockCallback(bytes calldata data) external returns (bytes memory) {
+        require(msg.sender == address(poolManager), "Only PoolManager");
+        FlashParams memory params = abi.decode(data, (FlashParams));
+        // Uniswap v4: Strategy execution
+        // Inside here, the contract would "take" tokens from the pool manager,
+        // swap them via 0x, and then "settle" the debt.
+        _executeStrategy(params.sellToken, params.sellAmount, 0, data);
+        return "";
     }
 
     function _executeStrategy(
