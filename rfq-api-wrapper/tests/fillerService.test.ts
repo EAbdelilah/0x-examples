@@ -24,10 +24,8 @@ describe('FillerService', () => {
         orders: [
           {
             orderHash: '0xhash1',
-            sellToken: '0xuserSell',
-            buyToken: '0xuserBuy',
-            sellAmount: '100',
-            currentOutputs: [{ amount: '90' }], // User wants 90
+            input: { token: '0xuserSell', amount: '100' },
+            outputs: [{ token: '0xuserBuy', amount: '90' }],
             encodedOrder: '0xencoded',
             signature: '0xsig'
           }

@@ -6,6 +6,7 @@ describe('Enso and OpenOcean Adapters', () => {
   let mockZeroExService: any;
 
   beforeEach(() => {
+    process.env.SPREAD_BPS = '0';
     mockZeroExService = {
       getPrice: vi.fn(),
     };

@@ -14,7 +14,7 @@ const strategy = process.argv[2];
 const chainId = parseInt(process.argv[3] || '8453');
 
 const zeroEx = new ZeroExService();
-const kyber = new KyberLimitOrderService();
+const kyber = new KyberLimitOrderService(process.env.PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000001', zeroEx);
 
 async function main() {
   let bot;

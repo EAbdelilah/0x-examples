@@ -2,11 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OneInchAdapter } from '../src/adapters/oneInchAdapter';
 import { ZeroExService } from '../src/services/zeroExService';
 
+process.env.SPREAD_BPS = '0';
+
 describe('OneInchAdapter', () => {
   let adapter: OneInchAdapter;
   let mockZeroExService: any;
 
   beforeEach(() => {
+    process.env.SPREAD_BPS = '0';
     mockZeroExService = {
       getPrice: vi.fn(),
     };

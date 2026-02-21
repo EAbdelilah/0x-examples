@@ -1,6 +1,12 @@
-import Database from 'better-sqlite3';
 import path from 'path';
 import logger from '../utils/logger';
+
+let Database: any;
+try {
+    Database = (await import('better-sqlite3')).default;
+} catch (e) {
+    logger.warn('better-sqlite3 not found, using in-memory mock for database');
+}
 
 export interface PersistedOrder {
     id?: number;
@@ -17,12 +23,21 @@ export interface PersistedOrder {
 }
 
 export class DatabaseService {
-    private db: Database.Database;
+    private db: any;
 
     constructor() {
-        const dbPath = path.resolve(process.cwd(), 'bot_data.db');
-        this.db = new Database(dbPath);
-        this.init();
+        if (Database) {
+            try {
+                const dbPath = path.resolve(process.cwd(), 'bot_data.db');
+                this.db = new Database(dbPath);
+                this.init();
+            } catch (e) {
+                logger.warn('Failed to initialize better-sqlite3, using mock');
+                this.db = null;
+            }
+        } else {
+            this.db = null;
+        }
     }
 
     private init() {
@@ -56,6 +71,10 @@ export class DatabaseService {
     }
 
     trackProfit(strategy: string, chainId: number, token: string, amount: string, txHash: string) {
+        if (!this.db) {
+            logger.info(`[MockDB] Profit: ${amount} for ${strategy}`);
+            return;
+        }
         const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO profits (strategy, chainId, token, amount, txHash)
       VALUES (?, ?, ?, ?, ?)
@@ -73,6 +92,7 @@ export class DatabaseService {
     }
 
     saveOrder(order: PersistedOrder) {
+        if (!this.db) return;
         const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO orders (orderHash, chainId, maker, sellToken, buyToken, sellAmount, buyAmount, status, txHash)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -91,16 +111,19 @@ export class DatabaseService {
     }
 
     updateOrderStatus(orderHash: string, status: string, txHash?: string) {
+        if (!this.db) return;
         const stmt = this.db.prepare('UPDATE orders SET status = ?, txHash = ? WHERE orderHash = ?');
         stmt.run(status, txHash || null, orderHash);
     }
 
     getOrder(orderHash: string): PersistedOrder | undefined {
+        if (!this.db) return undefined;
         const stmt = this.db.prepare('SELECT * FROM orders WHERE orderHash = ?');
         return stmt.get(orderHash) as PersistedOrder | undefined;
     }
 
     getRecentOrders(limit: number = 10): PersistedOrder[] {
+        if (!this.db) return [];
         const stmt = this.db.prepare('SELECT * FROM orders ORDER BY createdAt DESC LIMIT ?');
         return stmt.all(limit) as PersistedOrder[];
     }

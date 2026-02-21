@@ -1,11 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { KyberLimitOrderService } from '../src/services/kyberLimitOrderService';
+import axios from 'axios';
+
+vi.mock('axios');
+const mockedAxios = axios as any;
 
 describe('KyberLimitOrderService', () => {
   let service: KyberLimitOrderService;
   let mockZeroExService: any;
 
   beforeEach(() => {
+    process.env.SPREAD_BPS = '0';
     mockZeroExService = {
       getPrice: vi.fn(),
     };
@@ -15,6 +20,27 @@ describe('KyberLimitOrderService', () => {
   it('should create and sign a limit order', async () => {
     mockZeroExService.getPrice.mockResolvedValue({
       buyAmount: '2000',
+    });
+
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        data: {
+          types: {
+            EIP712Domain: [],
+            Order: [{ name: 'maker', type: 'address' }]
+          },
+          domain: {},
+          message: { makerAmount: '1000', takerAmount: '2000' },
+          primaryType: 'Order'
+        }
+      }
+    });
+
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        order: { makerAmount: 1000n, takerAmount: 2000n },
+        signature: '0x123'
+      }
     });
 
     const result = await service.createAndPostOrder({
