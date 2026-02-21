@@ -1,10 +1,10 @@
 # 0x Protocol & 0% Flash Loan Strategy Evaluation
 
-This document evaluates 9 major flash loan strategies and the zero-percent providers, specifically analyzing how they integrate with the **0x Protocol** to maximize "Alpha" (profitability) and gas efficiency.
+This document evaluates 8 major flash loan strategies and the zero-percent providers, specifically analyzing how they integrate with the **0x Protocol** to maximize "Alpha" (profitability) and gas efficiency.
 
 ---
 
-## Part 1: The 9 Strategies & 0x Integration
+## Part 1: The 8 Strategies & 0x Integration
 
 | # | Strategy | 0x Role | Evaluation & Synergy |
 | :--- | :--- | :--- | :--- |
@@ -14,9 +14,8 @@ This document evaluates 9 major flash loan strategies and the zero-percent provi
 | **4** | **Collateral Swap** | **Execution Engine** | **High.** Swap collateral within a loan (e.g., Aave). 0x's `permit2` and `transformERC20` make these swaps atomic and slippage-protected. |
 | **5** | **JIT Liquidity** | **Hedging Venue** | **High.** After adding liquidity to a pool for a single block, use 0x to hedge any inventory risk incurred from the whale trade. |
 | **6** | **Mirroring** | **Liquidity Source** | **CORE STRATEGY.** This project's primary function. Use 0x liquidity to act as a "Maker" on other aggregators. Zero inventory risk. |
-| **7** | **Governance Flash** | **N/A** | **Low.** 0x is not needed for borrowing/returning the same voting token. |
-| **8** | **Self-Liquidation**| **Asset Recovery** | **High.** Flash loan the debt, repay it, then use 0x to swap just enough collateral to repay the flash loan. Saves 10% penalty. |
-| **9** | **Yield Hopping** | **Position Migration**| **Moderate.** Moving LP positions between chains or protocols. 0x handles the underlying swaps required to change asset exposure. |
+| **7** | **Self-Liquidation**| **Asset Recovery** | **High.** Flash loan the debt, repay it, then use 0x to swap just enough collateral to repay the flash loan. Saves 10% penalty. |
+| **8** | **Yield Hopping** | **Position Migration**| **Moderate.** Moving LP positions between chains or protocols. 0x handles the underlying swaps required to change asset exposure. |
 
 ---
 

@@ -1,6 +1,6 @@
 # Strategy Bot Suite
 
-This repository includes a modular bot suite for executing the 12 strategies identified in our research. Each bot leverages the **0x Protocol** for liquidation/hedging and the **AtomicBroker** for 0% fee flash loans.
+This repository includes a modular bot suite for executing the 8 strategies identified in our research. Each bot leverages the **0x Protocol** for liquidation/hedging and the **AtomicBroker** for 0% fee flash loans.
 
 ## How to Run
 

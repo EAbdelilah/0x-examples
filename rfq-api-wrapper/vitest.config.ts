@@ -5,7 +5,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     env: {
-      SPREAD_BPS: '0'
+      SPREAD_BPS: '0',
+      MIN_SPREAD_BPS: '0',
+      VOLATILITY_MULTIPLIER: '0',
+      MAX_SPREAD_BPS: '100'
     }
   },
 })

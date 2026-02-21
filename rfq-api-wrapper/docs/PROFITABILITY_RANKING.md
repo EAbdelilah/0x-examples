@@ -1,6 +1,6 @@
 # 0x Strategy Profitability Ranking
 
-This document ranks 9 major trading strategies based on their **Expected Profitability (Alpha)** for the 2026/2027 DeFi market, assuming integration with **0x API v2** and **0% fee flash loans**.
+This document ranks 8 major trading strategies based on their **Expected Profitability (Alpha)** for the 2026/2027 DeFi market, assuming integration with **0x API v2** and **0% fee flash loans**.
 
 ---
 
