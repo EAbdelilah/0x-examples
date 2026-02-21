@@ -73,3 +73,5 @@ To maximize revenue, you should prioritize chains where **on-chain liquidity is 
 2.  **Inventory Management**: Instead of just using 0x, eventually hold your own "Inventory" (e.g., hold 10 ETH and 20,000 USDC). Quoting from your own wallet is **15 bps cheaper** than quoting from 0x.
 
 **Final Recommendation**: Start on **Base** with **`SPREAD_BPS=30`**. It’s safe, covers your 0x costs, and is competitive enough to start seeing volume.
+
+For a detailed breakdown of which strategies offer the most alpha, see our [Profitability Ranking](./docs/PROFITABILITY_RANKING.md).
