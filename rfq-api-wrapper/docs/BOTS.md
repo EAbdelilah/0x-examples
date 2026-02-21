@@ -16,6 +16,9 @@ bun run bot <strategy> <chainId>
 | `spatial` | **Spatial Arbitrage** | Compares 0x aggregate prices against a local DEX. |
 | `liquidate` | **Liquidation** | Monitors lending pools and uses 0x to swap seized collateral. |
 | `mirror` | **Mirroring (RFQ)** | Posts limit orders on Kyber/1inch/ParaSwap backed by 0x liquidity. |
+| `triangular`| **Triangular Arb** | Executes multi-token loops on a single DEX using 0x to hedge. |
+| `collateral`| **Collateral Swap** | Optimizes lending positions by swapping collateral via 0x. |
+| `self-liq`  | **Self-Liquidation** | Monitors and pre-emptively repays your own unhealthy debt. |
 
 ## Configuration
 

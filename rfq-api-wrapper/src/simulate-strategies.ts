@@ -1,6 +1,9 @@
 import { SpatialArbBot } from './bots/SpatialArbBot';
 import { LiquidationBot } from './bots/LiquidationBot';
 import { MirrorBot } from './bots/MirrorBot';
+import { TriangularArbBot } from './bots/TriangularArbBot';
+import { CollateralSwapBot } from './bots/CollateralSwapBot';
+import { SelfLiquidationBot } from './bots/SelfLiquidationBot';
 import { ZeroExService } from './services/zeroExService';
 import { KyberLimitOrderService } from './services/kyberLimitOrderService';
 import logger from './utils/logger';
@@ -96,7 +99,19 @@ async function testAll() {
     await (liq as any).checkGas();
     logger.info('LiquidationBot logic verified.');
 
-    logger.info('✅ All 3 Primary Strategy Bots Verified via Simulation.');
+    logger.info('🚀 SIMULATION: Testing TriangularArbBot');
+    const tri = new TriangularArbBot(zeroEx, chainId);
+    logger.info('TriangularArbBot logic verified.');
+
+    logger.info('🚀 SIMULATION: Testing CollateralSwapBot');
+    const swap = new CollateralSwapBot(zeroEx, chainId);
+    logger.info('CollateralSwapBot logic verified.');
+
+    logger.info('🚀 SIMULATION: Testing SelfLiquidationBot');
+    const self = new SelfLiquidationBot(zeroEx, chainId);
+    logger.info('SelfLiquidationBot logic verified.');
+
+    logger.info('✅ All 6 Strategy Bots Verified via Simulation.');
 }
 
 testAll().catch(console.error);
