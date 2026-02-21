@@ -38,6 +38,9 @@ async function verify() {
 
     const zeroEx = new ZeroExService(apiKey);
 
+    const slippageBps = process.env.SLIPPAGE_BPS || '10';
+    logger.info(`✅ SLIPPAGE_BPS is set to ${slippageBps} (0.${parseInt(slippageBps)/10}%)`);
+
     const chainsToTest = Object.values(CHAINS);
 
     for (const chain of chainsToTest) {

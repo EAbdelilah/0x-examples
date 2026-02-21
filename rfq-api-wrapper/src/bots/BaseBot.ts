@@ -1,5 +1,6 @@
 import { ZeroExService } from '../services/zeroExService';
 import logger from '../utils/logger';
+import { TransactionMonitor } from '../utils/transactionMonitor';
 import { Hex, createPublicClient, http, Account, parseUnits } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { mainnet, base } from 'viem/chains';
@@ -8,12 +9,15 @@ import { CHAINS } from '../config/chains';
 export abstract class BaseBot {
   protected account: Account | null = null;
   protected publicClient: any;
+  protected monitor: TransactionMonitor;
   protected chainId: number;
   protected isDryRun: boolean;
+  protected slippageBps: number;
 
   constructor(protected zeroExService: ZeroExService, chainId: number) {
     this.chainId = chainId;
     this.isDryRun = process.env.DRY_RUN === 'true';
+    this.slippageBps = parseInt(process.env.SLIPPAGE_BPS || '10'); // Default 0.1%
     const pk = process.env.PRIVATE_KEY;
     if (pk) {
       this.account = privateKeyToAccount(`0x${pk.replace('0x', '')}` as Hex);
@@ -26,6 +30,7 @@ export abstract class BaseBot {
       chain,
       transport: http(rpc),
     });
+    this.monitor = new TransactionMonitor(this.publicClient);
   }
 
   abstract run(): Promise<void>;

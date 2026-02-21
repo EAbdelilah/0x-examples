@@ -29,4 +29,17 @@ export class TransactionMonitor {
       return null;
     }
   }
+
+  /**
+   * Suggests priority fees for MEV-protected transactions.
+   * Private RPCs often require a minimum priority fee to be included by builders.
+   */
+  async getMEVGasStrategy() {
+    const feeData = await this.publicClient.estimateFeesPerGas();
+    return {
+      maxFeePerGas: feeData.maxFeePerGas,
+      // Use 1.5x the base priority fee to ensure builder priority
+      maxPriorityFeePerGas: (feeData.maxPriorityFeePerGas || 0n) * 150n / 100n,
+    };
+  }
 }

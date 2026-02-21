@@ -260,6 +260,7 @@ export class FillerService {
         sellAmount: order.input.amount,
         chainId,
         taker: brokerAddress,
+        slippagePercentage: Number(process.env.SLIPPAGE_BPS || '10') / 10000,
       });
 
       // 2. Prepare FlashParams for AtomicBroker
