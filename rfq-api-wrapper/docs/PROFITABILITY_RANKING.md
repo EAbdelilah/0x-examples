@@ -8,37 +8,51 @@ This document ranks 8 major trading strategies based on their **Expected Profita
 
 ### 🏆 Tier 1: The "Alpha Kings" (Highest Profit Potential)
 
-| Rank | Strategy | Why it Wins | Scalability |
-| :--- | :--- | :--- | :--- |
-| **1** | **Mirroring (RFQ)** | **Infinite Volume.** By using 0x as a source and quoting on 1inch/ParaSwap, you capture a stable spread on every trade. Low risk, extremely scalable. | ⭐⭐⭐⭐⭐ |
-| **2** | **Spatial Arbitrage** | **Pure Alpha.** Catching price gaps between a local DEX (e.g., Aerodrome) and the global 0x aggregate. High frequency on L2s (Base/Optimism). | ⭐⭐⭐⭐ |
-| **3** | **Liquidation** | **Maximum Margin.** Liquidating unhealthy positions gives a 5-10% immediate bonus. Rarer than Arb, but the most profitable per-transaction strategy. | ⭐⭐⭐ |
+| Rank | Strategy | Why it Wins | Expected Capital | Scalability |
+| :--- | :--- | :--- | :--- | :--- |
+| **1** | **Mirroring (RFQ)** | **Infinite Volume.** Capture a stable spread on every trade using 0x as a source. | **$0 (Zero Capital)** | ⭐⭐⭐⭐⭐ |
+| **2** | **Spatial Arbitrage** | **Pure Alpha.** Price gaps between local DEXs and 0x aggregate. | **$0 (Zero Capital)** | ⭐⭐⭐⭐ |
+| **3** | **Liquidation** | **Max Margin.** 5-10% immediate bonus for liquidating unhealthy positions. | **$0 (Zero Capital)** | ⭐⭐⭐ |
 
 ### 🥈 Tier 2: The "Alpha Hunters" (Consistent, specialized)
 
-| Rank | Strategy | Why it Wins | Scalability |
-| :--- | :--- | :--- | :--- |
-| **4** | **JIT Liquidity** | **Fee Capture.** Adding concentrated liquidity right before a large swap. Requires Uniswap v4 "Hooks" and 0x hedging for safety. | ⭐⭐⭐ |
-| **5** | **Collateral Swap** | **Efficiency.** Swapping collateral within a loan to avoid liquidation or chase yield. 0x's Permit2 makes this gas-efficient. | ⭐⭐ |
+| Rank | Strategy | Why it Wins | Expected Capital | Scalability |
+| :--- | :--- | :--- | :--- | :--- |
+| **4** | **JIT Liquidity** | **Fee Capture.** concentrated liquidity right before a swap. | **High Capital** | ⭐⭐⭐ |
+| **5** | **Collateral Swap** | **Efficiency.** Swapping collateral within a loan to avoid liquidation. | **$0 (Zero Capital)** | ⭐⭐ |
 
 ### 🥉 Tier 3: The "Alpha Scraps" (Low margin or high competition)
 
-| Rank | Strategy | Why it Wins | Scalability |
-| :--- | :--- | :--- | :--- |
-| **6** | **Triangular Arb** | **Efficiency play.** Hard to win against specialized CEX-DEX bots, but possible on new L2s where 0x depth beats single-pool depth. | ⭐⭐ |
-| **7** | **Yield Hopping** | **Passive gains.** Automatically moving capital. Low margin after gas, but good for automated treasury management. | ⭐⭐⭐ |
-| **8** | **Self-Liquidation** | **Loss Prevention.** Saves the 10% penalty. It's "profit" by capital preservation, not capital gain. | ⭐ |
+| Rank | Strategy | Why it Wins | Expected Capital | Scalability |
+| :--- | :--- | :--- | :--- | :--- |
+| **6** | **Triangular Arb** | **Efficiency.** Hard to win against specialized bots, but possible on new L2s. | **$0 (Zero Capital)** | ⭐⭐ |
+| **7** | **Yield Hopping** | **Passive gains.** Automatically moving capital to chase yield. | **High Capital** | ⭐⭐⭐ |
+| **8** | **Self-Liquidation** | **Loss Prevention.** Saves the 10% penalty on your own unhealthy debt. | **$0 (Zero Capital)** | ⭐ |
 
 ---
 
 ## Strategy Scorecard (Summary)
 
-| Strategy | Frequency | Profit Margin | Complexity | 0x Synergy |
+| Strategy | Frequency | Profit Margin | Expected Capital | 0x Synergy |
 | :--- | :--- | :--- | :--- | :--- |
-| **Mirroring** | ⚡ High | 🟢 Stable (0.2-0.5%) | Med | 💎 Maximum |
-| **Spatial Arb** | ⚡ High | 🟡 Variable (0.5-2%) | Med | 💎 High |
-| **Liquidation** | 💧 Low | 🔴 High (5-10%) | High | 💎 High |
-| **JIT Liquidity**| 💧 Low | 🔴 High (Fee share) | Very High | 🟡 Medium |
+| **Mirroring** | ⚡ High | 🟢 Stable (0.2-0.5%) | 🟢 **$0 (Flash Loan)** | 💎 Maximum |
+| **Spatial Arb** | ⚡ High | 🟡 Variable (0.5-2%) | 🟢 **$0 (Flash Loan)** | 💎 High |
+| **Liquidation** | 💧 Low | 🔴 High (5-10%) | 🟢 **$0 (Flash Loan)** | 💎 High |
+| **JIT Liquidity**| 💧 Low | 🔴 High (Fee share) | 🔴 **High ($10k+)** | 🟡 Medium |
+
+---
+
+## 💎 The Zero-Capital Advantage: 0x + Flash Loans
+
+In traditional finance, providing liquidity or executing multi-million dollar arbitrage requires significant capital. In the 2027 DeFi stack provided by this suite, the **AtomicBroker** levels the playing field.
+
+### How we achieve $0 Capital Execution:
+1. **Borrow**: Use **Uniswap v4** or **Sky** to borrow tokens at **0% fee**.
+2. **Swap**: Use **0x API v2** to execute the strategy leg (Arb/Hedge/Liquidate) with minimal slippage.
+3. **Repay**: Return the borrowed amount in the same transaction.
+4. **Profit**: The leftover tokens are sent to your wallet.
+
+**Effect**: You can execute a $1,000,000 Spatial Arbitrage with a wallet balance of only **$5.00** (to cover the initial gas).
 
 ---
 
