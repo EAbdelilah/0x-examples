@@ -1,4 +1,5 @@
 import logger from './logger';
+import { metrics } from '../services/metricsService';
 import { PublicClient, Hex } from 'viem';
 
 export class TransactionMonitor {
@@ -16,8 +17,10 @@ export class TransactionMonitor {
 
       if (receipt.status === 'success') {
         logger.info(`[${strategy}] ✅ Transaction Confirmed in block ${receipt.blockNumber}`);
+        metrics.strategySuccess.inc({ strategy, chainId: this.publicClient.chain?.id.toString() || 'unknown' });
       } else {
         logger.error(`[${strategy}] ❌ Transaction Reverted in block ${receipt.blockNumber}`);
+        metrics.strategyFail.inc({ strategy, chainId: this.publicClient.chain?.id.toString() || 'unknown' });
       }
       return receipt;
     } catch (error: any) {

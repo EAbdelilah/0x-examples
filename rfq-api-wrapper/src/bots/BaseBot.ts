@@ -1,5 +1,6 @@
 import { ZeroExService } from '../services/zeroExService';
 import logger from '../utils/logger';
+import { metrics } from '../services/metricsService';
 import { TransactionMonitor } from '../utils/transactionMonitor';
 import { Hex, createPublicClient, http, Account, parseUnits } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -51,6 +52,25 @@ export abstract class BaseBot {
     const dryStatus = this.isDryRun ? '[DRY RUN] ' : '';
     const status = profitable ? '🔥 PROFITABLE' : '❄️ Scanning';
     logger.info(`${dryStatus}[${strategy}] Chain ${this.chainId} | ${status} | ${details}`);
+
+    if (profitable) {
+      metrics.strategyExecutions.inc({ strategy, chainId: this.chainId.toString() });
+    }
+  }
+
+  protected async retry<T>(
+    fn: () => Promise<T>,
+    retries: number = 3,
+    delay: number = 1000
+  ): Promise<T> {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (retries === 0) throw error;
+      logger.warn(`Execution failed, retrying in ${delay}ms... (${retries} left)`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return this.retry(fn, retries - 1, delay * 2);
+    }
   }
 
   protected async checkSafety(

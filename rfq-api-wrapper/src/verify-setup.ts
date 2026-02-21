@@ -2,13 +2,21 @@ import dotenv from 'dotenv';
 import { ZeroExService } from './services/zeroExService';
 import { privateKeyToAccount } from 'viem/accounts';
 import { Hex, createPublicClient, http } from 'viem';
+import os from 'os';
 import logger from './utils/logger';
 import { CHAINS } from './config/chains';
 
 dotenv.config();
 
 async function verify() {
-    logger.info('--- Comprehensive Setup Verification ---');
+    logger.info('--- Comprehensive Production Setup Verification ---');
+
+    // 0. Hardware Check
+    const freeMem = os.freemem() / (1024 * 1024);
+    logger.info(`ℹ️ System Memory: ${freeMem.toFixed(0)}MB free`);
+    if (freeMem < 256) {
+        logger.warn('⚠️ Low memory detected. Node process may OOM during high-frequency trading.');
+    }
 
     const apiKey = process.env.ZERO_EX_API_KEY;
     if (!apiKey) {

@@ -35,6 +35,13 @@ const adapters = [
 ];
 
 import { dbService } from './services/database';
+import { metrics } from './services/metricsService';
+
+// Metrics endpoint for Prometheus
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', metrics.getContentType());
+  res.end(await metrics.getMetrics());
+});
 
 // Health check with DB stats
 app.get('/health', (req, res) => {
