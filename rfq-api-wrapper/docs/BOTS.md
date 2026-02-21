@@ -1,6 +1,6 @@
 # Strategy Bot Suite
 
-This repository includes a modular bot suite for executing the 8 strategies identified in our research. Each bot leverages the **0x Protocol** for liquidation/hedging and the **AtomicBroker** for 0% fee flash loans.
+This repository includes a modular bot suite for executing the 6 **Zero-Capital** strategies identified in our research. Each bot leverages the **0x Protocol** for liquidation/hedging and the **AtomicBroker** for 0% fee flash loans.
 
 ## How to Run
 
@@ -16,7 +16,6 @@ bun run bot <strategy> <chainId>
 | `spatial` | **Spatial Arbitrage** | Compares 0x aggregate prices against a local DEX. |
 | `liquidate` | **Liquidation** | Monitors lending pools and uses 0x to swap seized collateral. |
 | `mirror` | **Mirroring (RFQ)** | Posts limit orders on Kyber/1inch/ParaSwap backed by 0x liquidity. |
-| `yield` | **Yield Hopping** | Automatically migrates capital to the highest-paying vaults. |
 
 ## Configuration
 

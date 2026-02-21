@@ -1,7 +1,6 @@
 import { SpatialArbBot } from './bots/SpatialArbBot';
 import { LiquidationBot } from './bots/LiquidationBot';
 import { MirrorBot } from './bots/MirrorBot';
-import { YieldHoppingBot } from './bots/YieldHoppingBot';
 import { ZeroExService } from './services/zeroExService';
 import { KyberLimitOrderService } from './services/kyberLimitOrderService';
 import logger from './utils/logger';
@@ -28,11 +27,8 @@ async function main() {
     case 'mirror':
       bot = new MirrorBot(zeroEx, chainId, kyber);
       break;
-    case 'yield':
-      bot = new YieldHoppingBot(zeroEx, chainId);
-      break;
     default:
-      logger.error('Invalid strategy. Use: spatial | liquidate | mirror | yield');
+      logger.error('Invalid strategy. Use: spatial | liquidate | mirror');
       process.exit(1);
   }
 

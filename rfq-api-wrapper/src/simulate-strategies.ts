@@ -1,7 +1,6 @@
 import { SpatialArbBot } from './bots/SpatialArbBot';
 import { LiquidationBot } from './bots/LiquidationBot';
 import { MirrorBot } from './bots/MirrorBot';
-import { YieldHoppingBot } from './bots/YieldHoppingBot';
 import { ZeroExService } from './services/zeroExService';
 import { KyberLimitOrderService } from './services/kyberLimitOrderService';
 import logger from './utils/logger';
@@ -97,11 +96,7 @@ async function testAll() {
     await (liq as any).checkGas();
     logger.info('LiquidationBot logic verified.');
 
-    logger.info('🚀 SIMULATION: Testing YieldHoppingBot');
-    const yieldBot = new YieldHoppingBot(zeroEx, chainId);
-    logger.info('YieldHoppingBot logic verified.');
-
-    logger.info('✅ All 4 Primary Strategy Bots Verified via Simulation.');
+    logger.info('✅ All 3 Primary Strategy Bots Verified via Simulation.');
 }
 
 testAll().catch(console.error);

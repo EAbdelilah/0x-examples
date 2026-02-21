@@ -1,6 +1,6 @@
 # 0x Strategy Profitability Ranking
 
-This document ranks 8 major trading strategies based on their **Expected Profitability (Alpha)** for the 2026/2027 DeFi market, assuming integration with **0x API v2** and **0% fee flash loans**.
+This document ranks 6 major **Zero-Capital** trading strategies based on their **Expected Profitability (Alpha)** for the 2026/2027 DeFi market, assuming integration with **0x API v2** and **0% fee flash loans**.
 
 ---
 
@@ -18,16 +18,14 @@ This document ranks 8 major trading strategies based on their **Expected Profita
 
 | Rank | Strategy | Why it Wins | Expected Capital | Scalability |
 | :--- | :--- | :--- | :--- | :--- |
-| **4** | **JIT Liquidity** | **Fee Capture.** concentrated liquidity right before a swap. | **High Capital** | ⭐⭐⭐ |
-| **5** | **Collateral Swap** | **Efficiency.** Swapping collateral within a loan to avoid liquidation. | **$0 (Zero Capital)** | ⭐⭐ |
+| **4** | **Collateral Swap** | **Efficiency.** Swapping collateral within a loan to avoid liquidation. | **$0 (Zero Capital)** | ⭐⭐ |
 
 ### 🥉 Tier 3: The "Alpha Scraps" (Low margin or high competition)
 
 | Rank | Strategy | Why it Wins | Expected Capital | Scalability |
 | :--- | :--- | :--- | :--- | :--- |
-| **6** | **Triangular Arb** | **Efficiency.** Hard to win against specialized bots, but possible on new L2s. | **$0 (Zero Capital)** | ⭐⭐ |
-| **7** | **Yield Hopping** | **Passive gains.** Automatically moving capital to chase yield. | **High Capital** | ⭐⭐⭐ |
-| **8** | **Self-Liquidation** | **Loss Prevention.** Saves the 10% penalty on your own unhealthy debt. | **$0 (Zero Capital)** | ⭐ |
+| **5** | **Triangular Arb** | **Efficiency.** Hard to win against specialized bots, but possible on new L2s. | **$0 (Zero Capital)** | ⭐⭐ |
+| **6** | **Self-Liquidation** | **Loss Prevention.** Saves the 10% penalty on your own unhealthy debt. | **$0 (Zero Capital)** | ⭐ |
 
 ---
 
@@ -38,7 +36,7 @@ This document ranks 8 major trading strategies based on their **Expected Profita
 | **Mirroring** | ⚡ High | 🟢 Stable (0.2-0.5%) | 🟢 **$0 (Flash Loan)** | 💎 Maximum |
 | **Spatial Arb** | ⚡ High | 🟡 Variable (0.5-2%) | 🟢 **$0 (Flash Loan)** | 💎 High |
 | **Liquidation** | 💧 Low | 🔴 High (5-10%) | 🟢 **$0 (Flash Loan)** | 💎 High |
-| **JIT Liquidity**| 💧 Low | 🔴 High (Fee share) | 🔴 **High ($10k+)** | 🟡 Medium |
+| **Collateral Swap**| 💧 Low | 🟢 Stable (Gas saved) | 🟢 **$0 (Flash Loan)** | 💎 High |
 
 ---
 
