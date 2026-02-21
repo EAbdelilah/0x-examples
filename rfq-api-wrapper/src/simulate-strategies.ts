@@ -2,7 +2,6 @@ import { SpatialArbBot } from './bots/SpatialArbBot';
 import { LiquidationBot } from './bots/LiquidationBot';
 import { MirrorBot } from './bots/MirrorBot';
 import { YieldHoppingBot } from './bots/YieldHoppingBot';
-import { LoopFarmingBot } from './bots/LoopFarmingBot';
 import { ZeroExService } from './services/zeroExService';
 import { KyberLimitOrderService } from './services/kyberLimitOrderService';
 import logger from './utils/logger';
@@ -102,11 +101,7 @@ async function testAll() {
     const yieldBot = new YieldHoppingBot(zeroEx, chainId);
     logger.info('YieldHoppingBot logic verified.');
 
-    logger.info('🚀 SIMULATION: Testing LoopFarmingBot');
-    const loop = new LoopFarmingBot(zeroEx, chainId);
-    logger.info('LoopFarmingBot logic verified.');
-
-    logger.info('✅ All 5 Strategy Bots Verified via Simulation.');
+    logger.info('✅ All 4 Primary Strategy Bots Verified via Simulation.');
 }
 
 testAll().catch(console.error);

@@ -17,7 +17,6 @@ bun run bot <strategy> <chainId>
 | `liquidate` | **Liquidation** | Monitors lending pools and uses 0x to swap seized collateral. |
 | `mirror` | **Mirroring (RFQ)** | Posts limit orders on Kyber/1inch/ParaSwap backed by 0x liquidity. |
 | `yield` | **Yield Hopping** | Automatically migrates capital to the highest-paying vaults. |
-| `loop` | **Loop Farming** | Manages leveraged positions with recursive swaps. |
 
 ## Configuration
 
