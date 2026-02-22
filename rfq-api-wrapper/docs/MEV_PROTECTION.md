@@ -72,3 +72,13 @@ By utilizing 0% fee flash loans (Balancer, Sky, Uni v4), you execute trades with
 | **Front-running** | Private RPC | 1 |
 | **Price Volatility** | Slippage Limits | 3 |
 | **Smart Contract Risk**| Atomic Revert + 0% Flash | 2 & 4 |
+
+---
+
+## 📍 Strategy-Specific Hardening: Spatial Arbitrage
+
+Spatial Arbitrage is particularly sensitive to **latency** and **sandwich attacks**.
+
+1.  **Strict minBuyAmount**: Our `SpatialArbBot` calculates the exact output required to repay the flash loan + 10 bps profit. This is passed into the `AtomicBroker`. If an MEV bot sandwiches the "Buy Low" leg, the `minBuyAmount` check will fail and the TX will revert.
+2.  **Price Staleness Check**: 0x quotes include an expiration. The bot will never attempt to execute a quote that is more than 60 seconds old.
+3.  **Private RPC Priority**: For Spatial Arb, we recommend setting a higher `maxPriorityFeePerGas` (handled by our `TransactionMonitor`) to ensure your private bundle is picked up by the very first available builder.
