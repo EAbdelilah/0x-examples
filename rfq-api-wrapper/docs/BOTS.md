@@ -9,6 +9,12 @@ Use the following command format:
 bun run bot <strategy> <chainId>
 ```
 
+### Running Multiple Strategies Simultaneously
+You can run multiple strategies in a single process by passing a comma-separated list:
+```bash
+bun run bot spatial,liquidate,mirror 8453
+```
+
 ### Available Strategies
 
 | Command | Strategy | Description |
