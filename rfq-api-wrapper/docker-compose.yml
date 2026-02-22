@@ -44,3 +44,9 @@ services:
     env_file: .env
     restart: unless-stopped
     command: ["bun", "run", "bot", "spatial,liquidate,mirror", "8453"]
+
+  full-bot:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    command: ["bun", "run", "bot", "spatial,liquidate,mirror,triangular,collateral,self-liq", "8453"]

@@ -91,8 +91,8 @@ bun run filler
 # Usage: bun run bot <strategy> <chainId>
 bun run bot spatial 8453
 
-# Run 3 strategies simultaneously in one process
-bun run bot spatial,liquidate,mirror 8453
+# Run all 6 strategies simultaneously in one process
+bun run bot spatial,liquidate,mirror,triangular,collateral,self-liq 8453
 ```
 
 For more details on available bots, see [docs/BOTS.md](./docs/BOTS.md).

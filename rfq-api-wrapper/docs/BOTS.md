@@ -10,9 +10,9 @@ bun run bot <strategy> <chainId>
 ```
 
 ### Running Multiple Strategies Simultaneously
-You can run multiple strategies in a single process by passing a comma-separated list:
+You can run multiple strategies in a single process by passing a comma-separated list. To run the **full suite of 6 strategies** simultaneously:
 ```bash
-bun run bot spatial,liquidate,mirror 8453
+bun run bot spatial,liquidate,mirror,triangular,collateral,self-liq 8453
 ```
 
 ### Available Strategies
