@@ -31,6 +31,11 @@ const BROKER_ABI = parseAbi([
   'function executeUniV4(bytes params) external',
 ]);
 
+/**
+ * FillerService acts as the "Atomic Mirroring" engine.
+ * It fills intents (UniswapX, Enso) using flash-loaned liquidity from 0x.
+ * This is a 100% Zero-Capital strategy.
+ */
 export class FillerService {
   private readonly UNISWAPX_API = 'https://api.uniswap.org/v2/orders';
   private account: Account | null = null;

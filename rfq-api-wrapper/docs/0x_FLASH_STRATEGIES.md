@@ -12,7 +12,7 @@ This document evaluates the 6 major **Zero-Capital** flash loan strategies and t
 | **2** | **Triangular Arb** | **Price Discovery** | **Moderate.** 0x can be used to check if the internal DEX price has deviated from the global aggregate price. |
 | **3** | **Liquidation** | **Collateral Exit** | **Maximum Synergy.** After seizing collateral, use 0x RFQ to swap it for the debt token. 0x's PMMs often offer better prices for large "liquidated" chunks than public AMMs. |
 | **4** | **Collateral Swap** | **Execution Engine** | **High.** Swap collateral within a loan (e.g., Aave). 0x's `permit2` and `transformERC20` make these swaps atomic and slippage-protected. |
-| **5** | **Mirroring** | **Liquidity Source** | **CORE STRATEGY.** This project's primary function. Use 0x liquidity to act as a "Maker" on other aggregators. Zero inventory risk. |
+| **5** | **Mirroring** | **Liquidity Source** | **CORE STRATEGY.** Act as an Atomic Filler on UniswapX/1inch Fusion using 0x liquidity. Zero inventory risk. |
 | **6** | **Self-Liquidation**| **Asset Recovery** | **High.** Flash loan the debt, repay it, then use 0x to swap just enough collateral to repay the flash loan. Saves 10% penalty. |
 
 ---

@@ -4,6 +4,13 @@ import { KyberLimitOrderService } from '../services/kyberLimitOrderService';
 import { InventoryService } from '../services/inventoryService';
 import { CHAINS } from '../config/chains';
 
+/**
+ * MirrorBot executes a passive market making strategy.
+ * NOTE: This bot requires token inventory in your wallet because it posts
+ * traditional Limit Orders where the TAKER initiates the transaction.
+ *
+ * For a ZERO-CAPITAL version of this strategy, use the FillerService (Atomic Mirroring).
+ */
 export class MirrorBot extends BaseBot {
   private inventory: InventoryService;
 

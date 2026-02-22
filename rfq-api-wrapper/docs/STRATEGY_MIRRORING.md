@@ -1,18 +1,21 @@
-# Strategy Detail: Liquidity Mirroring (XEMM)
+# Strategy Detail: Atomic Liquidity Mirroring (Zero-Capital XEMM)
 
-**Liquidity Mirroring**, also known as **Cross-Exchange Market Making (XEMM)**, is a strategy where the bot acts as a "Maker" (Liquidity Provider) on one exchange by "mirroring" the liquidity and price from another, more liquid exchange.
+**Atomic Liquidity Mirroring** is a zero-capital version of Cross-Exchange Market Making (XEMM). Instead of posting passive limit orders that require inventory, the bot actively "fills" user intents (like Dutch Auctions) using flash-loaned liquidity sourced from **0x Protocol**.
 
 ---
 
-## 1. The Mirroring Model
+## 1. The Atomic Mirroring Model
 
-In this suite, the `MirrorBot` uses **0x API v2** as the source of truth and **KyberSwap (Limit Order API)** as the target venue:
+Our implementation focuses on **Intent-based platforms** (UniswapX, 1inch Fusion) to ensure $0 upfront capital:
 
-1.  **Price Discovery**: The bot pings 0x to find the "True" market price for a pair (e.g., WETH/USDC).
-2.  **Spread Application**: The bot adds a small profit margin (the **Spread**, e.g., 50 bps) to that price.
-3.  **Quote Posting**: The bot signs and posts a **Limit Order** on the target aggregator (KyberSwap).
-4.  **Passive Execution**: If a user on KyberSwap wants to trade at that price, they "fill" our order.
-5.  **Instant Hedge**: Since we are mirrored from 0x, we can instantly execute a swap on 0x to replace the tokens we just sold, locking in the spread as profit.
+1.  **Intent Monitoring**: The bot monitors platforms for user intents (e.g., a UniswapX auction where a user wants to sell 1 ETH for at least 2,490 USDC).
+2.  **0x Price Discovery**: The bot pings 0x to see if it can buy 2,490 USDC for less than 1 ETH (or sell 1 ETH for more than 2,500 USDC).
+3.  **Spread Application**: The bot ensures the 0x price is better than the intent price by at least the `SPREAD_BPS`.
+4.  **Atomic Fill**: If profitable, the bot executes a single transaction:
+    -   **Flash Loan** the required tokens.
+    -   **Swap** via 0x to capture the price difference.
+    -   **Fill** the user's intent on the target platform (e.g., UniswapX).
+    -   **Repay** the flash loan and keep the profit.
 
 ---
 
@@ -52,13 +55,24 @@ Unlike traditional market making where you might get "stuck" with a large positi
 
 | Metric | Target | Reason |
 | :--- | :--- | :--- |
-| **Fill Rate** | 5% - 10% | You won't win every quote, but high volume comes from being slightly better than the AMM price. |
-| **Average Spread** | 20 - 50 bps | Needs to cover the 0x protocol fee (typically 15 bps) and gas. |
-| **Inventory Turnover** | High | The faster you hedge on 0x, the more often you can provide new quotes. |
+| **Fill Rate** | 2% - 5% | Competitive, but zero risk. You only execute when profit is guaranteed. |
+| **Average Spread** | 10 - 30 bps | Tighter spreads are possible because there is zero inventory risk or capital cost. |
+| **Execution Latency** | < 500ms | Critical for winning Dutch Auctions before other fillers. |
 
 ---
 
-## 5. 0x Protocol Synergy
+## 5. Zero-Capital Platforms
+
+To run this strategy with $0 capital, use:
+- **UniswapX**: Fully automated in our `FillerService`.
+- **Enso Finance**: Semi-automated via our `EnsoAdapter`.
+- **1inch Fusion**: Requires Resolver whitelist.
+
+*Note: KyberSwap Limit Orders are NOT zero-capital and require holding inventory.*
+
+---
+
+## 6. 0x Protocol Synergy
 
 The `MirrorBot` is uniquely empowered by specific 0x API v2 features:
 

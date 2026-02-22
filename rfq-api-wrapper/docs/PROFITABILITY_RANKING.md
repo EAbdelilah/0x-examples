@@ -10,7 +10,7 @@ This document ranks 6 major **Zero-Capital** trading strategies based on their *
 
 | Rank | Strategy | Why it Wins | Expected Capital | Scalability |
 | :--- | :--- | :--- | :--- | :--- |
-| **1** | **Mirroring (RFQ)** | **Infinite Volume.** Capture a stable spread on every trade using 0x as a source. | **$0 (Zero Capital)** | ⭐⭐⭐⭐⭐ |
+| **1** | **Mirroring (Atomic)**| **Infinite Volume.** Actively fill intents (UniswapX/1inch Fusion) using 0x. | **$0 (Zero Capital)** | ⭐⭐⭐⭐⭐ |
 | **2** | **Spatial Arbitrage** | **Pure Alpha.** Price gaps between local DEXs and 0x aggregate. | **$0 (Zero Capital)** | ⭐⭐⭐⭐ |
 | **3** | **Liquidation** | **Max Margin.** 5-10% immediate bonus for liquidating unhealthy positions. | **$0 (Zero Capital)** | ⭐⭐⭐ |
 
