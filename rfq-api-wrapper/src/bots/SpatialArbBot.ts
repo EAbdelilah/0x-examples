@@ -3,6 +3,7 @@ import logger from '../utils/logger';
 import { formatUnits, parseAbi, Hex, createWalletClient, http, encodeAbiParameters, parseAbiParameters } from 'viem';
 import { PriceStreamService, PriceUpdate } from '../services/priceStreamService';
 import { CHAINS } from '../config/chains';
+import { SPOKES } from '../config/spokes';
 
 const BROKER_ABI = parseAbi([
   'function executeBalancer(address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
@@ -24,51 +25,62 @@ export class SpatialArbBot extends BaseBot {
   async run() {
     logger.info(`Starting PRODUCTION Spatial Arbitrage Bot on chain ${this.chainId}...`);
 
-    const tokenA = '0x4200000000000000000000000000000000000006'; // WETH (Base)
-    const tokenB = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // USDC (Base)
+    const spokes = SPOKES[this.chainId] || [];
+    logger.info(`Monitoring ${spokes.length} spokes: ${spokes.map(s => s.name).join(', ')}`);
 
-    // Event-driven execution
+    const tokenA = CHAINS[this.chainId]?.tokens['WETH'];
+    const tokenB = CHAINS[this.chainId]?.tokens['USDC'];
+
+    if (!tokenA || !tokenB) {
+      logger.error(`WETH or USDC not configured for chain ${this.chainId}`);
+      return;
+    }
+
+    // Event-driven execution: Triggered by the "Hub" (0x) price updates
     this.priceStream.on('priceUpdate', async (update: PriceUpdate) => {
-      await this.evaluateOpportunity(update);
+      // Evaluate against each configured Spoke
+      for (const spoke of spokes) {
+        await this.evaluateOpportunity(update, spoke);
+      }
     });
 
     await this.priceStream.subscribe(tokenA, tokenB, this.chainId);
   }
 
-  private async evaluateOpportunity(update: PriceUpdate) {
+  private async evaluateOpportunity(update: PriceUpdate, spoke: any) {
     try {
-      // 1. Get Local DEX price (Mocked for demo)
-      // In production, you'd fetch this from a WebSocket provider or direct node query
+      // 1. Get Local Spoke Price (Mocked for demo, would use RPC to get reserves/slot0)
+      // In production, this call targets the specific 'spoke.factory' or 'spoke.router'
       const localPrice = BigInt(update.price) * 101n / 100n;
 
       const profit = localPrice - BigInt(update.price);
-      const isProfitable = profit > 1000000n; // > 1 USDC profit threshold
+      const isProfitable = profit > 1000000n; // > 1 unit profit threshold
 
       if (isProfitable) {
-         this.logOpportunity('SpatialArb', `Real-time Gap: ${profit} units`, true);
+         this.logOpportunity('SpatialArb', `${spoke.name} Gap: ${profit} units`, true);
 
          if (await this.checkGas()) {
            const isSafe = await this.checkSafety(BigInt(10**18), BigInt(update.price) + profit);
            if (isSafe) {
-             this.executeArb(update, profit);
+             this.executeArb(update, profit, spoke);
            }
          }
       }
     } catch (e: any) {
-      logger.error(`Evaluation Error: ${e.message}`);
+      logger.error(`Evaluation Error for ${spoke.name}: ${e.message}`);
     }
   }
 
-  private async executeArb(update: PriceUpdate, profit: bigint) {
+  private async executeArb(update: PriceUpdate, profit: bigint, spoke: any) {
     if (this.isDryRun) {
-      logger.info(`🚀 [DRY RUN] Executing arb for ${profit} profit`);
+      logger.info(`🚀 [DRY RUN] Executing ${spoke.name} arb for ${profit} profit`);
       return;
     }
 
     const brokerAddress = CHAINS[this.chainId]?.atomicBroker as Hex;
     if (!brokerAddress || !this.account) return;
 
-    logger.info(`🚀 EXECUTING REAL-TIME ARB for ${profit} profit!`);
+    logger.info(`🚀 EXECUTING REAL-TIME ${spoke.name} ARB for ${profit} profit!`);
 
     try {
       const walletClient = createWalletClient({

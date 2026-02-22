@@ -75,7 +75,10 @@ async function testAll() {
 
     logger.info('🚀 SIMULATION: Testing SpatialArbBot');
     const arb = new SpatialArbBot(zeroEx, chainId);
-    await (arb as any).evaluateOpportunity({ price: '2000000000', sellToken: 'WETH', buyToken: 'USDC' });
+    await (arb as any).evaluateOpportunity(
+        { price: '2000000000', sellToken: 'WETH', buyToken: 'USDC' },
+        { name: 'MockSpoke' }
+    );
 
     logger.info('🚀 SIMULATION: Testing MirrorBot');
     const mirror = new MirrorBot(zeroEx, chainId, kyber);

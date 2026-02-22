@@ -60,7 +60,22 @@ When run with a **Private RPC** (like Flashbots), your "Buy Low" and "Sell High"
 
 ---
 
-## 4. Operational Parameters
+## 4. Targeted Spokes (Local DEXs)
+
+The `SpatialArbBot` is pre-configured to monitor the highest-alpha spokes on each chain:
+
+| Chain | Spokes (DEXs) |
+| :--- | :--- |
+| **Ethereum** | Uniswap V2, SushiSwap, Uniswap V3 |
+| **Base** | **Aerodrome**, BaseSwap, Uniswap V3 |
+| **Polygon** | QuickSwap V2, Uniswap V3, SushiSwap |
+| **Arbitrum** | **Camelot**, Uniswap V3, SushiSwap |
+
+*Note: Aerodrome and Camelot are prioritized as they often have the most significant price deviations from the 0x aggregator.*
+
+---
+
+## 5. Operational Parameters
 
 | Parameter | Recommended Setting | Reason |
 | :--- | :--- | :--- |
