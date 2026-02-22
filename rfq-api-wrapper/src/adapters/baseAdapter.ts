@@ -8,6 +8,11 @@ export interface AggregatorAdapter {
 
 export abstract class BaseAdapter implements AggregatorAdapter {
   protected spreadBps: number;
+  protected stats = {
+    quotesRequested: 0,
+    quotesServed: 0,
+    errors: 0,
+  };
 
   constructor(
     public name: string,
@@ -17,6 +22,14 @@ export abstract class BaseAdapter implements AggregatorAdapter {
   }
 
   abstract handleQuote(req: any): Promise<any>;
+
+  public getStats() {
+    return this.stats;
+  }
+
+  public trackRequest() { this.stats.quotesRequested++; }
+  public trackSuccess() { this.stats.quotesServed++; }
+  public trackError() { this.stats.errors++; }
 
   /**
    * Applies a dynamic spread to the 0x buyAmount.

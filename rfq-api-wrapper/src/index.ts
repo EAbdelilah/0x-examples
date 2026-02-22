@@ -43,6 +43,18 @@ app.get('/metrics', async (req, res) => {
   res.end(await metrics.getMetrics());
 });
 
+// Aggregator Stats endpoint
+app.get('/stats/mirroring', (req, res) => {
+  const stats: Record<string, any> = {};
+  adapters.forEach(a => {
+    stats[a.name] = (a as any).getStats();
+  });
+  res.json({
+    timestamp: new Date().toISOString(),
+    adapters: stats
+  });
+});
+
 // Health check with DB stats
 app.get('/health', (req, res) => {
   const recentOrders = dbService.getRecentOrders(10);
@@ -65,11 +77,14 @@ adapters.forEach(adapter => {
 
   const handler = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
+      (adapter as any).trackRequest();
       // Support both query params (GET) and body (POST)
       const data = req.method === 'GET' ? req.query : req.body;
       const quote = await adapter.handleQuote(data);
+      (adapter as any).trackSuccess();
       res.json(quote);
     } catch (error) {
+      (adapter as any).trackError();
       next(error);
     }
   };

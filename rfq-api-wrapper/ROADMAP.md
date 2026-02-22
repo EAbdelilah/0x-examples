@@ -2,8 +2,8 @@
 
 Follow this guide to start generating revenue with your RFQ API wrapper.
 
-## Phase 1: The "Low Barrier" Entry (Day 1)
-**Goal**: Start filling orders or registering actions without waiting for manual approval.
+## Phase 1: The "Low Barrier" Entry (The Hunter 🦅)
+**Goal**: Start filling existing orders or registering actions without waiting for manual approval.
 
 1.  **Enso Finance (Action Provider)**:
     *   **Action**: Register your 0x-backed action on Enso.
@@ -29,8 +29,8 @@ Follow this guide to start generating revenue with your RFQ API wrapper.
     *   **Action**: Contact their team or apply via their portal.
     *   **Why**: They are often more accessible to new PMMs than 1inch. They provide an RFQ API suite that is compatible with the `OpenOceanAdapter` I've built.
 
-## Phase 4: The "Final Bosses" (Professional Grade)
-**Goal**: Access the highest volume in DeFi by becoming a whitelisted Resolver/Solver.
+## Phase 4: The "Final Bosses" (The Fisherman 🎣)
+**Goal**: Access the highest volume in DeFi by becoming a whitelisted Private Market Maker (Resolver/Solver).
 
 5.  **1inch Fusion (Resolver)**:
     *   **Action**: Stake 1INCH and apply for Resolver status.

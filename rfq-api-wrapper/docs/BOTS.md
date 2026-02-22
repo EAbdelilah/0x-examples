@@ -1,6 +1,23 @@
-# Strategy Bot Suite
+# Strategy Bot Suite: Hunters and Fishermen
 
-This repository includes a modular bot suite for executing the 6 **Zero-Capital** strategies identified in our research. Each bot leverages the **0x Protocol** for liquidation/hedging and the **AtomicBroker** for 0% fee flash loans.
+This repository includes a modular bot suite for executing the high-alpha Zero-Capital strategies identified in our research. The suite operates in two primary modes: **Passive (Fisherman)** and **Active (Hunter)**.
+
+---
+
+## 🎣 The Fisherman (Passive Mirroring)
+**Primary Command**: `bun run start` (The RFQ Adapter Server)
+
+In this mode, you act as a Private Market Maker. You provide signed quotes to aggregators and wait for users to take them.
+
+-   **Target Platforms**: 1inch, ParaSwap, Enso.
+-   **Visibility**: Monitor performance via `GET /stats/mirroring`.
+
+## 🦅 The Hunter (Active Filling)
+**Primary Command**: `bun run filler` or `bun run bot <strategy>`
+
+In this mode, you are actively scanning the blockchain for existing opportunities to pounce on.
+
+-   **Target Platforms**: UniswapX, local DEX pools.
 
 ## How to Run
 
