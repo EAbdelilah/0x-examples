@@ -4,6 +4,7 @@ This project acts as an adapter for the 0x Swap API v2, allowing you to use 0x l
 
 ## Features
 
+- **Visual Architecture**: Understand the system at a glance in our [Visual Guide](./docs/VISUAL_ARCHITECTURE.md).
 - **Multi-Aggregator Support**: Pre-built adapters for 1inch, ParaSwap, and Enso.
 - **Powered by 0x**: Uses 0x Swap API v2 for reliable, high-quality pricing.
 - **Production-Ready Foundation**:
