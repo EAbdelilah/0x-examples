@@ -6,18 +6,31 @@ This document outlines the tokens that can be flashloaned on the supported netwo
 
 ## 1. Supported Liquidity Protocols (Flashloan Providers)
 
-**🏆 Primary Choice: Balancer V2**
-*   **Fee**: **0%** (Flash Loans are free on Balancer V2).
-*   **Availability**: Polygon, Arbitrum, Base, Optimism, Mainnet.
-*   **Contract**: `Vault` (Address is typically `0xBA12222222228d8Ba445958a75a0704d566BF2C8` across most chains).
+**🏆 Tier 1: 0% Fee Providers (Integrated)**
 
-**Backup Options:**
-*   **Aave V3**: 
-    *   **Fee**: ~0.05% - 0.09%.
-    *   **Use Case**: When Balancer liquidity is insufficient or unavailable (e.g., specific tokens, or networks like Unichain if Balancer isn't there).
-*   **Uniswap V3**: 
-    *   **Fee**: Pool fee (0.05%, 0.3%, 1%).
-    *   **Use Case**: "Flash Swaps". Good for sourcing tokens if you are going to swap on that pool anyway, but expensive for pure borrowing. Primary option for **Unichain**.
+Our bot is designed to use **0% fee flash loans** as the primary capital source to ensure maximum arbitrage profitability.
+
+1.  **Balancer V2/V3**
+    *   **Fee**: **0%**.
+    *   **Best For**: Wide variety of assets (any token in their vault).
+    *   **Availability**: Mainnet, Base, Arbitrum, Polygon, Optimism.
+    *   **Contract**: `0xBA12222222228d8Ba445958a75a0704d566BF2C8`.
+
+2.  **Sky (Flash Mint)**
+    *   **Fee**: **0%**.
+    *   **Best For**: Massive stablecoin liquidity (**DAI** and **USDS**).
+    *   **Limit**: Up to 500M USDS.
+    *   **Availability**: Mainnet.
+    *   **Interface**: EIP-3156.
+
+3.  **Morpho Blue**
+    *   **Fee**: **0%** (for most markets).
+    *   **Best For**: Major pairs (WETH, USDC) with high efficiency.
+    *   **Availability**: Mainnet, Base.
+
+**Backup Options (Fee-based):**
+*   **Aave V3**: ~0.05% fee. Good for niche tokens.
+*   **Uniswap V3**: Pool fee (0.05% - 1%). Best for "Flash Swaps" on newer chains like **Unichain**.
 
 ## 2. Recommended Tokens by Chain
 

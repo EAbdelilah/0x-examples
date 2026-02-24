@@ -21,7 +21,7 @@ import { dbService } from './database';
 import { notifier } from './notificationService';
 
 const BROKER_ABI = parseAbi([
-  'function execute(address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
+  'function execute(uint8 provider, address providerAddress, address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
 ]);
 
 export class FillerService {
@@ -200,7 +200,7 @@ export class FillerService {
       // 3. Simulate before sending (avoid wasted gas on reverts)
       const ok = await this.arbitrageService.simulateExecution(
         chainId, broker, opportunity.borrowToken, opportunity.borrowAmount,
-        encodedParams, this.account.address
+        encodedParams, this.account.address, opportunity.provider, opportunity.providerAddress
       );
       if (!ok) {
         logger.warn(`⚠️  Simulation failed for intent ${order.orderHash?.slice(0, 10)} — skipping`);
@@ -212,7 +212,7 @@ export class FillerService {
         address: broker,
         abi: BROKER_ABI,
         functionName: 'execute',
-        args: [opportunity.borrowToken as Hex, opportunity.borrowAmount, encodedParams],
+        args: [opportunity.provider, opportunity.providerAddress as Hex, opportunity.borrowToken as Hex, opportunity.borrowAmount, encodedParams],
         chain: publicClient.chain,
       });
 
@@ -245,7 +245,7 @@ export class FillerService {
       // Simulate before sending — skip if it would revert
       const ok = await this.arbitrageService.simulateExecution(
         chainId, broker, opportunity.borrowToken, opportunity.borrowAmount,
-        encodedParams, this.account.address
+        encodedParams, this.account.address, opportunity.provider, opportunity.providerAddress
       );
       if (!ok) {
         logger.warn(`⚠️  Direct DEX arb simulation failed on chain ${chainId} — skipping`);
@@ -256,7 +256,7 @@ export class FillerService {
         address: broker,
         abi: BROKER_ABI,
         functionName: 'execute',
-        args: [opportunity.borrowToken as Hex, opportunity.borrowAmount, encodedParams],
+        args: [opportunity.provider, opportunity.providerAddress as Hex, opportunity.borrowToken as Hex, opportunity.borrowAmount, encodedParams],
         chain: publicClient.chain,
       });
 

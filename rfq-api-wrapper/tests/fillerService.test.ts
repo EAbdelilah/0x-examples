@@ -11,7 +11,7 @@ describe('FillerService', () => {
 
   beforeEach(() => {
     mockZeroExService = {
-      getPrice: vi.fn(),
+      getQuote: vi.fn(),
     };
     service = new FillerService(mockZeroExService);
     vi.clearAllMocks();
@@ -24,10 +24,16 @@ describe('FillerService', () => {
         orders: [
           {
             orderHash: '0xhash1',
-            sellToken: '0xuserSell',
-            buyToken: '0xuserBuy',
-            sellAmount: '100',
-            currentOutputs: [{ amount: '90' }], // User wants 90
+            input: {
+              token: '0xuserSell',
+              amount: '100'
+            },
+            outputs: [
+              {
+                token: '0xuserBuy',
+                amount: '90'
+              }
+            ],
             encodedOrder: '0xencoded',
             signature: '0xsig'
           }
@@ -36,8 +42,9 @@ describe('FillerService', () => {
     });
 
     // Mock 0x response: we can get 100 for them
-    mockZeroExService.getPrice.mockResolvedValue({
-      buyAmount: '100'
+    mockZeroExService.getQuote.mockResolvedValue({
+      buyAmount: '100',
+      source: '0x'
     });
 
     // We expect log or some action. Since executeFill just logs for now, we'll spy on logger.
@@ -46,7 +53,7 @@ describe('FillerService', () => {
     await service.monitorUniswapX(1);
 
     expect(mockedAxios.get).toHaveBeenCalled();
-    expect(mockZeroExService.getPrice).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockZeroExService.getQuote).toHaveBeenCalledWith(expect.objectContaining({
       sellToken: '0xuserSell',
       buyToken: '0xuserBuy',
       sellAmount: '100'
