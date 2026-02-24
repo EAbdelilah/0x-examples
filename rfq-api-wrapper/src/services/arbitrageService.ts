@@ -36,7 +36,7 @@ const SWAP_ROUTER_V3_ABI = parseAbi([
 ]);
 
 const BROKER_ABI = parseAbi([
-    'function execute(address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
+    'function execute(uint8 provider, address providerAddress, address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
 ]);
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -51,12 +51,20 @@ const MIN_PROFIT_USD_UNITS = 1_000_000n; // $1 in USDC (6 dec)
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+export enum FlashloanProvider {
+    BALANCER = 0,
+    MORPHO = 1,
+    SKY = 2
+}
+
 export interface ArbitrageOpportunity {
     chainId: number;
     borrowToken: string;
     borrowAmount: bigint;
     profitToken: string;
     minProfit: bigint;
+    provider: FlashloanProvider;
+    providerAddress: string;
     estimatedGasUnits?: bigint;
     actions: {
         target: string;
@@ -345,16 +353,26 @@ export class ArbitrageService {
         borrowToken: string,
         borrowAmount: bigint,
         encodedParams: Hex,
-        fromAddress: string
+        fromAddress: string,
+        provider: FlashloanProvider = FlashloanProvider.BALANCER,
+        providerAddress?: string
     ): Promise<boolean> {
         const client = this.getPublicClient(chainId);
+        const chainConfig = CHAINS[chainId];
+        const finalProviderAddress = providerAddress || chainConfig?.balancerVault;
+
+        if (!finalProviderAddress) {
+            logger.error(`No provider address available for chain ${chainId}`);
+            return false;
+        }
+
         try {
             await client.call({
                 to: broker as Address,
                 data: encodeFunctionData({
                     abi: BROKER_ABI,
                     functionName: 'execute',
-                    args: [borrowToken as Address, borrowAmount, encodedParams],
+                    args: [provider, finalProviderAddress as Address, borrowToken as Address, borrowAmount, encodedParams],
                 }),
                 account: fromAddress as Address,
             });
@@ -401,13 +419,20 @@ export class ArbitrageService {
                 const netProfit = grossProfit - gasCost;
 
                 if (netProfit > 0n) {
+                    const providerInfo = this.getBestFlashloanProvider(chainId, tokenA);
+                    if (!providerInfo) {
+                        logger.warn(`No flashloan provider for chain ${chainId} / token ${tokenA}`);
+                        continue;
+                    }
+
                     logger.info(
                         `🎯 DIRECT DEX ARB: ${buyQ.dex} -> ${bestSell.dex} | ` +
-                        `Gross: ${grossProfit} | Gas: ${gasCost} | Net: ${netProfit} (tokenA units)`
+                        `Gross: ${grossProfit} | Gas: ${gasCost} | Net: ${netProfit} (tokenA units) | ` +
+                        `Provider: ${FlashloanProvider[providerInfo.provider]}`
                     );
 
                     return this.buildCircularArbitrageOpportunity(
-                        chainId, tokenA, tokenB, amountIn, buyQ, bestSell, netProfit, broker
+                        chainId, tokenA, tokenB, amountIn, buyQuote, sellQuote, netProfit, broker, providerInfo
                     );
                 }
             }
@@ -430,7 +455,8 @@ export class ArbitrageService {
         buyQuote: DexQuote,
         sellQuote: DexQuote,
         netProfit: bigint,
-        broker: Hex
+        broker: Hex,
+        providerInfo: { provider: FlashloanProvider, address: string }
     ): ArbitrageOpportunity {
         const deadline = BigInt(Math.floor(Date.now() / 1000) + 300);
         const minAmountOut = (buyQuote.amountOut * 98n) / 100n; // 2% slippage
@@ -474,6 +500,8 @@ export class ArbitrageService {
             borrowAmount: amountIn,
             profitToken: tokenA,
             minProfit: netProfit / 2n, // Conservative minimum (50% of expected net)
+            provider: providerInfo.provider,
+            providerAddress: providerInfo.address,
             actions: [
                 // 1. Approve DEX1 router to spend tokenA
                 {
@@ -606,12 +634,17 @@ export class ArbitrageService {
         const borrowToken = intent.input.token;
         const borrowAmount = BigInt(intent.input.amount);
 
+        const providerInfo = this.getBestFlashloanProvider(chainId, borrowToken);
+        if (!providerInfo) return null;
+
         return {
             chainId,
             borrowToken,
             borrowAmount,
             profitToken: borrowToken,
             minProfit: 1n,
+            provider: providerInfo.provider,
+            providerAddress: providerInfo.address,
             actions: [
                 {
                     target: borrowToken,
@@ -635,6 +668,30 @@ export class ArbitrageService {
                 },
             ],
         };
+    }
+
+    private getBestFlashloanProvider(chainId: number, tokenAddress: string): { provider: FlashloanProvider, address: string } | null {
+        const chainConfig = CHAINS[chainId];
+        if (!chainConfig) return null;
+
+        // 1. Special case: Sky for USDS/DAI on Mainnet
+        if (chainId === 1 && chainConfig.skyFlashMint &&
+            (tokenAddress.toLowerCase() === chainConfig.tokens.DAI?.toLowerCase() ||
+             tokenAddress.toLowerCase() === chainConfig.tokens.USDS?.toLowerCase())) {
+            return { provider: FlashloanProvider.SKY, address: chainConfig.skyFlashMint };
+        }
+
+        // 2. Default to Balancer for widest asset support
+        if (chainConfig.balancerVault) {
+            return { provider: FlashloanProvider.BALANCER, address: chainConfig.balancerVault };
+        }
+
+        // 3. Fallback to Morpho
+        if (chainConfig.morphoBlue) {
+            return { provider: FlashloanProvider.MORPHO, address: chainConfig.morphoBlue };
+        }
+
+        return null;
     }
 
     // ─── Encoding ────────────────────────────────────────────────────────────

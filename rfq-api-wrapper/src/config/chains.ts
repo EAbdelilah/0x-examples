@@ -6,6 +6,8 @@
     };
     uniswapXReactor?: string;
     balancerVault?: string;
+    morphoBlue?: string;
+    skyFlashMint?: string;
     atomicBroker?: string;
     ensoRouter?: string;
     dexs?: {
@@ -1097,6 +1099,9 @@ export const CHAINS: Record<number, ChainConfig> = {
         },
         uniswapXReactor: '0x00000011F84B9aa48e5f8aA8B9897600006289Be',
         balancerVault: '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
+        morphoBlue: '0xBBBBBbbBBb9cCEdAB5396F13559037f10976A62d',
+        skyFlashMint: '0x06572C95FAA701256059aa122697B133aDEd9279', // USDS Flash Mint
+        atomicBroker: '0x0000000000000000000000000000000000000000', // Placeholder
     },
     '10': {
         name: 'Optimism',
@@ -1962,6 +1967,7 @@ export const CHAINS: Record<number, ChainConfig> = {
         },
         uniswapXReactor: '0x000000001Ec5656dcdB24D90DFa42742738De729',
         balancerVault: '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
+        morphoBlue: '0xBAa5CC21fd487B8Fcc2F632f3F4E8D37262a0842',
         atomicBroker: '0x5fbdb2315678afecb367f032d93f642f64180aa3',
         ensoRouter: '0xF75584eF6673aD213a685a1B58Cc0330B8eA22Cf',
     },
