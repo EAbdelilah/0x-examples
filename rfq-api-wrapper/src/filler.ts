@@ -23,9 +23,9 @@ async function tick() {
 
   const tasks = searchableChains.map(async (chain) => {
     try {
-      logger.debug(`Monitoring chain ${chain.chainId} (${chain.name})...`);
+      logger.info(`Monitoring chain ${chain.chainId} (${chain.name})...`);
       // Run monitors for this chain in parallel
-      await Promise.all([
+      await Promise.allSettled([
         fillerService.monitorUniswapX(chain.chainId)
       ]);
     } catch (error: any) {
@@ -33,14 +33,18 @@ async function tick() {
     }
   });
 
-  await Promise.all(tasks);
+  await Promise.allSettled(tasks);
 }
 
 async function main() {
-  logger.info(`Starting Atomic Arbitrage Filler Bot...`);
+  logger.info(`Starting Atomic Arbitrage Filler Bot (Filtered)...`);
+  logger.info(`Searchable Chains: ${searchableChains.map(c => c.name).join(', ')}`);
 
   // Start the perpetual monitor loop across all chains
-  await fillerService.runMonitorLoop();
+  while (true) {
+    await tick();
+    await new Promise(r => setTimeout(r, TICK_INTERVAL));
+  }
 }
 
 main().catch(err => {

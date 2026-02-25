@@ -6,6 +6,7 @@
     };
     uniswapXReactor?: string;
     balancerVault?: string;
+    skyFlashMint?: string;
     atomicBroker?: string;
     ensoRouter?: string;
     dexs?: {
@@ -1610,7 +1611,7 @@ export const CHAINS: Record<number, ChainConfig> = {
         },
         uniswapXReactor: '0x6000da47483062A0D734Ba3dc7576Ce6A0B645C4',
         balancerVault: '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
-        atomicBroker: '0xf4f4484fe47fac600ee3cb88eba1b7fd2757f0fa',
+        atomicBroker: '0x49ced1109ef45fd81f63adaee99e562560226063',
         ensoRouter: '0xF75584eF6673aD213a685a1B58Cc0330B8eA22Cf',
     },
     '250': {
@@ -1954,7 +1955,6 @@ export const CHAINS: Record<number, ChainConfig> = {
             yoETH: '0x3A43AEC53490CB9Fa922847385D82fe25d0E9De7',
             yoUSD: '0x0000000f2eB9f69274678c76222B35eEc7588a65',
             ysUSDC: '0xe9F2a5F9f3c846f29066d7fB3564F8E6B6b2D65b',
-            yUSD: '0x895e15020C3f52ddD4D8e9514eB83C39F53B1579',
             yUSD: '0x4772D2e014F9fC3a820C444e3313968e9a5C8121',
             ZBU: '0x2C8C89C442436CC6C0a77943E09c8Daf49Da3161',
             ZCHF: '0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553',
@@ -1962,7 +1962,7 @@ export const CHAINS: Record<number, ChainConfig> = {
         },
         uniswapXReactor: '0x000000001Ec5656dcdB24D90DFa42742738De729',
         balancerVault: '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
-        atomicBroker: '0x5fbdb2315678afecb367f032d93f642f64180aa3',
+        atomicBroker: '0x92109142178e62e61958071ce2e172211a948602',
         ensoRouter: '0xF75584eF6673aD213a685a1B58Cc0330B8eA22Cf',
     },
     '34443': {
@@ -2295,6 +2295,8 @@ export const CHAINS: Record<number, ChainConfig> = {
         },
         uniswapXReactor: '0xB274d5F4b833b61B340b654d600A864fB604a87c',
         balancerVault: '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
+        skyFlashMint: '0x6e76814E6979A34b223d249f33F7e618AC754cE', // Base USDS FlashMint
+        atomicBroker: '0x4e552d71d25a31c34d756109b31143eaf3896529',
     },
     '43114': {
         name: 'Avalanche',

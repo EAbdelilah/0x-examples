@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { createPublicClient, http, formatUnits, parseAbi } from 'viem';
-import { polygon, arbitrum } from 'viem/chains';
+import { polygon, base } from 'viem/chains';
 import logger from './utils/logger';
 import { CHAINS } from './config/chains';
 
@@ -13,13 +13,16 @@ async function checkBalances() {
     logger.info(`--- Checking Balances for ${MM_ADDRESS} ---`);
 
     const chainsToTest = [
-        { config: CHAINS[137], viemChain: polygon, rpc: process.env.RPC_URL_137 },
-        { config: CHAINS[42161], viemChain: arbitrum, rpc: process.env.RPC_URL_42161 }
+        { id: 137, viemChain: polygon },
+        { id: 8453, viemChain: base }
     ];
 
-    for (const { config, viemChain, rpc } of chainsToTest) {
+    for (const { id, viemChain } of chainsToTest) {
+        const config = CHAINS[id];
+        const rpc = process.env[`RPC_URL_${id}`];
+
         if (!rpc) {
-            logger.warn(` Skipping ${config.name}: RPC_URL_${config.chainId} missing in .env`);
+            logger.warn(` Skipping ${config.name}: RPC_URL_${id} missing in .env`);
             continue;
         }
 
@@ -35,7 +38,11 @@ async function checkBalances() {
             logger.info(`  Gas (${viemChain.nativeCurrency.symbol}): ${formatUnits(gasBalance, 18)}`);
 
             // Token Balances
-            for (const [symbol, address] of Object.entries(config.tokens)) {
+            const tokensToCheck = ['USDC', 'WETH', 'USDT', 'WBTC'];
+            for (const symbol of tokensToCheck) {
+                const address = config.tokens[symbol];
+                if (!address) continue;
+
                 try {
                     const balance = await client.readContract({
                         address: address as `0x${string}`,
@@ -48,9 +55,11 @@ async function checkBalances() {
                         abi: ERC20_ABI,
                         functionName: 'decimals',
                     });
-                    logger.info(`  ${symbol}: ${formatUnits(balance, decimals)}`);
+                    if (balance > 0n) {
+                        logger.info(`  ${symbol}: ${formatUnits(balance, decimals)}`);
+                    }
                 } catch (e: any) {
-                    logger.warn(`  Could not fetch balance for ${symbol}: ${e.message}`);
+                    // logger.warn(`  Could not fetch balance for ${symbol}: ${e.message}`);
                 }
             }
         } catch (error: any) {

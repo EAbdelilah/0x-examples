@@ -9,8 +9,10 @@ import {
     decodeFunctionResult,
     Address,
     parseUnits,
+    formatUnits,
+    getAddress,
 } from 'viem';
-import { mainnet } from 'viem/chains';
+import { mainnet, base, optimism, arbitrum, bsc, polygon, avalanche, fantom, celo } from 'viem/chains';
 import { ZeroExService } from './zeroExService';
 import { CHAINS } from '../config/chains';
 import logger from '../utils/logger';
@@ -29,6 +31,8 @@ const V2_ROUTER_ABI = parseAbi([
 const ERC20_ABI = parseAbi([
     'function approve(address spender, uint256 amount) external returns (bool)',
     'function decimals() external view returns (uint8)',
+    'function symbol() external view returns (string)',
+    'function balanceOf(address owner) external view returns (uint256)',
 ]);
 
 const SWAP_ROUTER_V3_ABI = parseAbi([
@@ -36,7 +40,12 @@ const SWAP_ROUTER_V3_ABI = parseAbi([
 ]);
 
 const BROKER_ABI = parseAbi([
-    'function execute(address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
+    'function executeBalancer(address vault, address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
+    'function executeSky(address flashMint, address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
+]);
+
+const PERMIT2_ABI = parseAbi([
+    'function approve(address token, address spender, uint160 amount, uint48 expiration) external',
 ]);
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -47,7 +56,7 @@ const SIX_DECIMAL_TOKENS = new Set([
 ]);
 
 /** Minimum profit in USD-equivalent (in token units) to bother executing */
-const MIN_PROFIT_USD_UNITS = 1_000_000n; // $1 in USDC (6 dec)
+const MIN_PROFIT_USD_UNITS = 100_000n; // $0.10 in USDC (6 dec)
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -58,6 +67,11 @@ export interface ArbitrageOpportunity {
     profitToken: string;
     minProfit: bigint;
     estimatedGasUnits?: bigint;
+    flashProvider?: {
+        name: string;
+        target: string;
+        type: 'balancer' | 'sky' | 'morpho';
+    };
     actions: {
         target: string;
         callData: string;
@@ -78,6 +92,7 @@ interface DexQuote {
 export class ArbitrageService {
     private publicClients: Map<number, any> = new Map();
     private decimalsCache: Map<string, number> = new Map();
+    private symbolsCache: Map<string, string> = new Map();
     // V3 fee tiers to try in order (most common first)
     private readonly FEE_TIERS = [500, 3000, 10000];
 
@@ -88,10 +103,23 @@ export class ArbitrageService {
         }
     }
 
+    private readonly CHAIN_MAP: Record<number, any> = {
+        1: mainnet,
+        10: optimism,
+        56: bsc,
+        137: polygon,
+        250: fantom,
+        8453: base,
+        42161: arbitrum,
+        42220: celo,
+        43114: avalanche,
+    };
+
     private getPublicClient(chainId: number) {
         if (this.publicClients.has(chainId)) return this.publicClients.get(chainId);
         const rpc = process.env[`RPC_URL_${chainId}`];
-        const client = createPublicClient({ chain: mainnet, transport: http(rpc) });
+        const chain = this.CHAIN_MAP[chainId] || mainnet;
+        const client = createPublicClient({ chain, transport: http(rpc) });
         this.publicClients.set(chainId, client);
         return client;
     }
@@ -115,8 +143,10 @@ export class ArbitrageService {
                     const symbolLower = symbol.toLowerCase();
                     if (SIX_DECIMAL_TOKENS.has(symbolLower)) {
                         this.decimalsCache.set(cacheKey, 6);
+                        this.symbolsCache.set(cacheKey, symbol);
                         return 6;
                     }
+                    this.symbolsCache.set(cacheKey, symbol);
                 }
             }
         }
@@ -135,6 +165,28 @@ export class ArbitrageService {
             // Default to 18 if call fails
             this.decimalsCache.set(cacheKey, 18);
             return 18;
+        }
+    }
+
+    /**
+     * Returns the symbol for a token address.
+     */
+    async getTokenSymbol(chainId: number, tokenAddress: string): Promise<string> {
+        const cacheKey = `${chainId}:${tokenAddress.toLowerCase()}`;
+        if (this.symbolsCache.has(cacheKey)) return this.symbolsCache.get(cacheKey)!;
+
+        // On-chain fallback
+        try {
+            const client = this.getPublicClient(chainId);
+            const sym = await client.readContract({
+                address: tokenAddress as Address,
+                abi: ERC20_ABI,
+                functionName: 'symbol',
+            }) as string;
+            this.symbolsCache.set(cacheKey, sym);
+            return sym;
+        } catch {
+            return 'TOK';
         }
     }
 
@@ -341,26 +393,131 @@ export class ArbitrageService {
      */
     async simulateExecution(
         chainId: number,
-        broker: string,
-        borrowToken: string,
-        borrowAmount: bigint,
-        encodedParams: Hex,
+        opportunity: ArbitrageOpportunity,
         fromAddress: string
     ): Promise<boolean> {
         const client = this.getPublicClient(chainId);
+        const broker = CHAINS[Number(chainId)]?.atomicBroker as Address;
+        if (!broker || !opportunity.flashProvider) return false;
+
+        const { borrowToken, borrowAmount, flashProvider } = opportunity;
+        const encodedParams = this.encodeFlashParams(opportunity);
+
+        // Pre-check Liquidity
+        const hasLiquidity = await this.checkProviderLiquidity(chainId, flashProvider, borrowToken, borrowAmount);
+        if (!hasLiquidity) {
+            logger.warn(`🚫 Insufficient liquidity on ${flashProvider.name} for ${borrowAmount} of ${borrowToken}`);
+            return false;
+        }
+
         try {
-            await client.call({
-                to: broker as Address,
-                data: encodeFunctionData({
-                    abi: BROKER_ABI,
-                    functionName: 'execute',
-                    args: [borrowToken as Address, borrowAmount, encodedParams],
-                }),
+            let functionName = 'executeBalancer';
+            let args: any[] = [];
+
+            if (flashProvider.type === 'balancer') {
+                functionName = 'executeBalancer';
+                args = [flashProvider.target as Address, borrowToken as Address, borrowAmount, encodedParams] as const;
+            } else if (flashProvider.type === 'sky') {
+                functionName = 'executeSky';
+                args = [flashProvider.target as Address, borrowToken as Address, borrowAmount, encodedParams] as const;
+            }
+
+            const brokerAbi = parseAbi([
+                `function ${functionName}(address, address, uint256, bytes) external`,
+            ]);
+
+            await client.simulateContract({
+                address: broker,
+                abi: brokerAbi,
+                functionName: functionName as any,
+                args: args as any,
                 account: fromAddress as Address,
             });
             return true;
         } catch (e: any) {
-            logger.warn(`🔴 Simulation failed (would revert): ${e.shortMessage || e.message}`);
+            const errorMsg = e.shortMessage || e.message;
+            // Enhanced error extraction for viem
+            let innerReason = '';
+            try {
+                if (e.walk) {
+                    const innerError = e.walk((err: any) => err.data || err.reason || err.message !== e.message);
+                    innerReason = innerError?.reason || innerError?.data || innerError?.message || '';
+                }
+            } catch {
+                innerReason = e.cause?.cause?.message || e.cause?.message || e.data || '';
+            }
+
+            logger.warn(`🔴 Simulation failed on ${flashProvider.name}: ${errorMsg}`);
+            if (innerReason && innerReason !== errorMsg) {
+                logger.warn(`🔍 Inner Revert Reason: ${innerReason}`);
+            }
+            if (e.data) {
+                logger.warn(`🔍 Revert Data (raw.data): ${e.data}`);
+            }
+            if (e.cause?.data) {
+                logger.warn(`🔍 Revert Data (cause.data): ${e.cause.data}`);
+            }
+            // If we still have no detail, log a bit more
+            if (!innerReason && !e.data && !e.cause?.data) {
+                logger.warn(`🔍 Full Error structure: ${JSON.stringify(e).slice(0, 1000)}`);
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Finds the best zero-fee provider for a flash loan.
+     */
+    async findBestFlashLoanProvider(chainId: number, token: string, amount: bigint): Promise<any> {
+        const config = CHAINS[Number(chainId)];
+        const providers = [];
+
+        // 1. Sky (DAI/USDS) - 0% fee
+        if (config.tokens.DAI && (token.toLowerCase() === config.tokens.DAI.toLowerCase() || (config.tokens.USDS && token.toLowerCase() === config.tokens.USDS.toLowerCase()))) {
+            const skyAddr = config.skyFlashMint;
+            if (skyAddr) {
+                providers.push({ name: 'Sky', type: 'sky', target: skyAddr });
+            }
+        }
+
+        // 2. Balancer - 0% fee
+        const balancerVault = config.balancerVault;
+        if (balancerVault) {
+            providers.push({ name: 'Balancer', type: 'balancer', target: balancerVault });
+        }
+
+        for (const p of providers) {
+            const ok = await this.checkProviderLiquidity(chainId, p, token, amount);
+            if (ok) return p;
+        }
+        logger.debug(`findBestFlashLoanProvider: No suitable provider found for ${amount} of ${token} on chain ${chainId}`);
+        return null;
+    }
+
+    private async checkProviderLiquidity(chainId: number, provider: any, token: string, amount: bigint): Promise<boolean> {
+        const client = this.getPublicClient(chainId);
+        try {
+            if (provider.type === 'balancer') {
+                const vault = provider.target as Address;
+                const balance = await client.readContract({
+                    address: token as Address,
+                    abi: ERC20_ABI,
+                    functionName: 'balanceOf',
+                    args: [vault],
+                }) as bigint;
+                const ok = balance >= amount;
+                if (!ok) {
+                    logger.warn(`Balancer Liquidity Check: vault=${vault} token=${token} has=${balance} needs=${amount}`);
+                }
+                return ok;
+            }
+            if (provider.type === 'sky') {
+                // Sky maximum flash loan is usually very high (500M+)
+                // For now, assume it's okay if it's DAI/USDS
+                return true;
+            }
+            return false;
+        } catch {
             return false;
         }
     }
@@ -548,6 +705,141 @@ export class ArbitrageService {
         }
     }
 
+    /**
+     * Fetch a quote for a swap that will execute INSIDE a flash loan callback.
+     * Uses KyberSwap (standard ERC20 approve+swap, no Permit2).
+     * Also normalizes native ETH output → WETH so Balancer repayment (ERC20 transfer) works.
+     */
+    async getExecutionQuote(chainId: number, sellToken: string, buyToken: string, amount: string) {
+        const broker = CHAINS[chainId]?.atomicBroker as Hex;
+        if (!broker) return null;
+
+        const wethOnChain = (CHAINS[Number(chainId)]?.tokens?.WETH || CHAINS[Number(chainId)]?.tokens?.WMATIC || '0x4200000000000000000000000000000000000006') as string;
+
+        // Normalize: input native ETH → 0xeeee, output native ETH → WETH (for Balancer repayment)
+        const normalizeInput = (addr: string) =>
+            addr.toLowerCase() === '0x0000000000000000000000000000000000000000'
+                ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+                : addr;
+        const normalizeOutput = (addr: string) => {
+            const low = addr.toLowerCase();
+            if (low === '0x0000000000000000000000000000000000000000' || low === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+                return wethOnChain;
+            }
+            return addr;
+        };
+
+        const execSell = normalizeInput(sellToken);
+        const execBuy = normalizeOutput(buyToken);
+
+        logger.info(`🔄 Fetching execution quote (Kyberswap): ${execSell.slice(0, 8)} → ${execBuy.slice(0, 8)} (taker: ${broker})`);
+
+        // Kyberswap chain slugs
+        const KYBER_CHAINS: Record<number, string> = {
+            1: 'ethereum',
+            8453: 'base',
+            137: 'polygon',
+            42161: 'arbitrum',
+            10: 'optimism',
+            56: 'bsc',
+        };
+        const chainSlug = KYBER_CHAINS[chainId];
+        if (!chainSlug) {
+            logger.warn(`getExecutionQuote: No Kyberswap slug for chainId ${chainId}`);
+            return null;
+        }
+
+        try {
+            // Step 1: Get route summary
+            const routeUrl = `https://aggregator-api.kyberswap.com/${chainSlug}/api/v1/routes?tokenIn=${execSell.toLowerCase()}&tokenOut=${execBuy.toLowerCase()}&amountIn=${amount}`;
+            const routeResp = await axios.get(routeUrl, { timeout: 8000 });
+            const routeSummary = routeResp.data?.data?.routeSummary;
+            if (!routeSummary) {
+                logger.warn('getExecutionQuote: Kyberswap returned no routeSummary');
+                return null;
+            }
+
+            // Step 2: Build transaction
+            const buildUrl = `https://aggregator-api.kyberswap.com/${chainSlug}/api/v1/route/build`;
+            const buildResp = await axios.post(buildUrl, {
+                routeSummary,
+                sender: broker,
+                recipient: broker,
+                slippageTolerance: 100, // 1% slippage for execution
+            }, { timeout: 8000 });
+
+            const txData = buildResp.data?.data;
+            if (!txData || !txData.data) {
+                logger.warn('getExecutionQuote: Kyberswap build returned no tx data');
+                return null;
+            }
+
+            // Return in 0x-compatible shape for the rest of the code
+            return {
+                to: txData.routerAddress,
+                data: txData.data,
+                value: txData.transactionValue ?? '0',
+                buyAmount: txData.amountOut,
+                allowanceTarget: txData.routerAddress,
+                source: 'Kyberswap',
+            };
+        } catch (error: any) {
+            const errData = error.response?.data;
+            logger.error('Kyberswap execution quote failed:', { message: error.message, data: errData });
+            // Fallback: try Odos
+            return this.getOdosExecutionQuote(chainId, execSell, execBuy, amount, broker as string);
+        }
+    }
+
+    /**
+     * Fallback execution quote using Odos (also non-Permit2, standard ERC20 calldata).
+     */
+    private async getOdosExecutionQuote(chainId: number, sellToken: string, buyToken: string, amount: string, taker: string) {
+        try {
+            // Step 1: Quote
+            const quoteResp = await axios.post('https://api.odos.xyz/sor/quote/v2', {
+                chainId,
+                inputTokens: [{ tokenAddress: sellToken.toLowerCase(), amount }],
+                outputTokens: [{ tokenAddress: buyToken.toLowerCase(), proportion: 1 }],
+                userAddr: taker.toLowerCase(),
+                slippageLimitPercent: 1,
+                disableRFQs: true,
+            }, { timeout: 8000 });
+
+            const pathId = quoteResp.data?.pathId;
+            const outAmounts = quoteResp.data?.outAmounts;
+            if (!pathId) {
+                logger.warn('getOdosExecutionQuote: no pathId in quote response');
+                return null;
+            }
+
+            // Step 2: Assemble transaction
+            const asmResp = await axios.post('https://api.odos.xyz/sor/assemble', {
+                userAddr: taker.toLowerCase(),
+                pathId,
+                simulate: false,
+            }, { timeout: 8000 });
+
+            const tx = asmResp.data?.transaction;
+            if (!tx) {
+                logger.warn('getOdosExecutionQuote: no transaction in assemble response');
+                return null;
+            }
+
+            return {
+                to: tx.to,
+                data: tx.data,
+                value: tx.value?.toString() ?? '0',
+                buyAmount: outAmounts?.[0] ?? '0',
+                allowanceTarget: asmResp.data?.inputDests?.[0] ?? tx.to,
+                source: 'Odos',
+            };
+        } catch (error: any) {
+            logger.error('Odos execution quote failed:', { message: error.message, data: error.response?.data });
+            return null;
+        }
+    }
+
     private async fetch1InchQuote(chainId: number, from: string, to: string, amount: string, taker: string) {
         const apiKey = process.env.ONE_INCH_API_KEY;
         if (!apiKey) return { buyAmount: '0', to: '0x', data: '0x', value: '0' };
@@ -599,12 +891,124 @@ export class ArbitrageService {
         source: 'uniswapx';
         aggregatorQuote: any;
     }): Promise<ArbitrageOpportunity | null> {
-        const { intent, aggregatorQuote, chainId } = params;
-        const broker = CHAINS[chainId]?.atomicBroker as Hex;
+        const { chainId, intent, aggregatorQuote } = params;
+        const broker = CHAINS[Number(chainId)]?.atomicBroker as Hex;
         if (!broker) return null;
 
-        const borrowToken = intent.input.token;
-        const borrowAmount = BigInt(intent.input.amount);
+        // Helper to normalize native to WETH for flash loans
+        const WNT = (CHAINS[Number(chainId)]?.tokens?.WETH || CHAINS[Number(chainId)]?.tokens?.WMATIC || '0x4200000000000000000000000000000000000006') as Address;
+        const PERMIT2 = getAddress('0x000000000022D473030F116DDEE9F6B43AC78BA3');
+
+        const normalize = (addr: string) => {
+            const low = addr.toLowerCase();
+            if (low === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || low === '0x0000000000000000000000000000000000000000') {
+                return getAddress(WNT);
+            }
+            return getAddress(addr);
+        };
+
+        // To fill a UniswapX order, we must PROVIDE the output tokens.
+        // So we borrow the OUTPUT token (what we give the user) from Balancer.
+        // UniswapX orders use startAmount/minAmount/endAmount - not a flat "amount".
+        const output = intent.outputs[0];
+        const borrowTokenRaw = output.token;
+        const borrowToken = normalize(borrowTokenRaw);
+        // Use minAmount (the min they'll accept at decay) — safest conservative amount to borrow.
+        const borrowAmountRaw = output.minAmount ?? output.endAmount ?? output.startAmount ?? output.amount;
+        if (!borrowAmountRaw) {
+            logger.warn(`❌ fillIntentArbitrage: Could not resolve output amount from order. Fields: ${JSON.stringify(output)}`);
+            return null;
+        }
+        const borrowAmount = BigInt(borrowAmountRaw);
+
+        const inputRaw = intent.input;
+        const userToken = normalize(inputRaw.token);
+        // Use startAmount for the input (what the user gives us; could decay but start is the max we'll receive)
+        const userAmountRaw = inputRaw.startAmount ?? inputRaw.maxAmount ?? inputRaw.amount;
+        if (!userAmountRaw) {
+            logger.warn(`❌ fillIntentArbitrage: Could not resolve input amount from order. Fields: ${JSON.stringify(inputRaw)}`);
+            return null;
+        }
+        const userAmount = BigInt(userAmountRaw);
+
+        logger.info(`🔍 Arbitrage Prep: Borrow ${borrowAmount} of ${borrowToken} (output) | Receive ${userAmount} of ${userToken} (input)`);
+
+
+        const isNativeOutput = borrowTokenRaw.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ||
+            borrowTokenRaw.toLowerCase() === '0x0000000000000000000000000000000000000000';
+
+        const isNativeUserToken = inputRaw.token.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ||
+            inputRaw.token.toLowerCase() === '0x0000000000000000000000000000000000000000';
+
+        const WETH_ABI = parseAbi(['function withdraw(uint256) external', 'function deposit() external payable']);
+
+        const actions: any[] = [];
+
+        if (isNativeOutput) {
+            // ── Native ETH output path ─────────────────────────────────────────
+            // 1. Unwrap WETH → ETH (we borrowed WETH, but order needs ETH)
+            actions.push({
+                target: WNT,
+                callData: encodeFunctionData({ abi: WETH_ABI, functionName: 'withdraw', args: [borrowAmount] }),
+                value: 0n,
+            });
+            // 2. Fill the UniswapX order — send ETH as value so the reactor gets it
+            actions.push({
+                target: intent.reactor,
+                callData: intent.fillData,
+                value: borrowAmount, // send ETH to reactor
+            });
+        } else {
+            // ── ERC20 output path ──────────────────────────────────────────────
+            // 1. Approve borrowToken → Permit2
+            actions.push({
+                target: borrowToken,
+                callData: encodeFunctionData({ abi: ERC20_ABI, functionName: 'approve', args: [PERMIT2, borrowAmount] }),
+                value: 0n,
+            });
+            // 2. Approve borrowToken → Reactor directly (some reactors pull directly)
+            actions.push({
+                target: borrowToken,
+                callData: encodeFunctionData({ abi: ERC20_ABI, functionName: 'approve', args: [intent.reactor as Address, borrowAmount] }),
+                value: 0n,
+            });
+            // 3. Permit2 allowance: let Reactor pull borrowToken from AtomicBroker
+            actions.push({
+                target: PERMIT2,
+                callData: encodeFunctionData({
+                    abi: PERMIT2_ABI,
+                    functionName: 'approve',
+                    args: [borrowToken, intent.reactor as Address, (1n << 160n) - 1n, 2000000000]
+                }),
+                value: 0n,
+            });
+            // 4. Fill the UniswapX order (give borrowToken, receive userToken)
+            actions.push({
+                target: intent.reactor,
+                callData: intent.fillData,
+                value: 0n,
+            });
+        }
+
+        // ── Aggregator swap: sell userToken → borrowToken (repayment token) ──
+        if (!isNativeUserToken) {
+            // Approve userToken for the aggregator
+            const spender = getAddress(aggregatorQuote.allowanceTarget || aggregatorQuote.to);
+            actions.push({
+                target: userToken,
+                callData: encodeFunctionData({ abi: ERC20_ABI, functionName: 'approve', args: [spender, userAmount] }),
+                value: 0n,
+            });
+        }
+
+        // Execute aggregator swap (userToken → borrowToken/WETH to repay flash loan)
+        actions.push({
+            target: aggregatorQuote.to,
+            callData: aggregatorQuote.data,
+            value: isNativeUserToken ? userAmount : 0n, // pass ETH value if selling native ETH
+        });
+
+        logger.info(`📝 Callback Actions: [${actions.map(a => `${a.target.slice(0, 10)}(v:${a.value})`).join(' -> ')}]`);
 
         return {
             chainId,
@@ -612,28 +1016,7 @@ export class ArbitrageService {
             borrowAmount,
             profitToken: borrowToken,
             minProfit: 1n,
-            actions: [
-                {
-                    target: borrowToken,
-                    callData: encodeFunctionData({ abi: ERC20_ABI, functionName: 'approve', args: [aggregatorQuote.to as Address, borrowAmount] }),
-                    value: 0n,
-                },
-                {
-                    target: aggregatorQuote.to,
-                    callData: aggregatorQuote.data,
-                    value: aggregatorQuote.value ? BigInt(aggregatorQuote.value) : 0n,
-                },
-                {
-                    target: intent.outputs[0].token,
-                    callData: encodeFunctionData({ abi: ERC20_ABI, functionName: 'approve', args: [intent.reactor as Address, BigInt(intent.outputs[0].amount)] }),
-                    value: 0n,
-                },
-                {
-                    target: intent.reactor,
-                    callData: intent.fillData,
-                    value: 0n,
-                },
-            ],
+            actions
         };
     }
 
@@ -641,11 +1024,13 @@ export class ArbitrageService {
 
     encodeFlashParams(opportunity: ArbitrageOpportunity): Hex {
         return encodeAbiParameters(
-            parseAbiParameters('address, uint256, (address, bytes, uint256)[]'),
+            parseAbiParameters('address, uint256, address[], bytes[], uint256[]'),
             [
                 opportunity.profitToken as Hex,
                 opportunity.minProfit,
-                opportunity.actions.map(a => [a.target as Hex, a.callData as Hex, a.value] as const),
+                opportunity.actions.map(a => a.target as Hex),
+                opportunity.actions.map(a => a.callData as Hex),
+                opportunity.actions.map(a => a.value),
             ]
         );
     }

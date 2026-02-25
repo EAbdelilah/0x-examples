@@ -12,16 +12,23 @@ import {
   Account,
   encodeAbiParameters,
   parseAbiParameters,
+  encodeFunctionData,
+  isAddress,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { mainnet, base, optimism, arbitrum, bsc } from 'viem/chains';
+import { mainnet, base, optimism, arbitrum, bsc, polygon, avalanche, fantom, celo } from 'viem/chains';
 import { CHAINS } from '../config/chains';
 import { getTopTokensForChain } from '../config/topTokens';
 import { dbService } from './database';
 import { notifier } from './notificationService';
 
 const BROKER_ABI = parseAbi([
-  'function execute(address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
+  'function executeBalancer(address vault, address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
+  'function executeSky(address flashMint, address tokenToBorrow, uint256 amountToBorrow, bytes params) external',
+]);
+
+const REACTOR_ABI = parseAbi([
+  'function execute((bytes order, bytes signature)[] calldata orders) external',
 ]);
 
 export class FillerService {
@@ -29,6 +36,17 @@ export class FillerService {
   private account: Account | null = null;
   private publicClients: Map<number, any> = new Map();
   private arbitrageService: ArbitrageService;
+  private readonly CHAIN_MAP: Record<number, any> = {
+    1: mainnet,
+    10: optimism,
+    56: bsc,
+    137: polygon,
+    250: fantom,
+    8453: base,
+    42161: arbitrum,
+    42220: celo,
+    43114: avalanche,
+  };
 
   constructor(private zeroExService: ZeroExService) {
     const pk = process.env.PRIVATE_KEY;
@@ -41,7 +59,8 @@ export class FillerService {
   private getPublicClient(chainId: number) {
     if (this.publicClients.has(chainId)) return this.publicClients.get(chainId);
     const rpc = process.env[`RPC_URL_${chainId}`];
-    const client = createPublicClient({ chain: mainnet, transport: http(rpc) });
+    const chain = this.CHAIN_MAP[chainId] || mainnet;
+    const client = createPublicClient({ chain, transport: http(rpc) });
     this.publicClients.set(chainId, client);
     return client;
   }
@@ -125,30 +144,93 @@ export class FillerService {
   }
 
   private async evaluateAndFillIntent(order: any, chainId: number, source: 'uniswapx') {
-    const sellToken = order.input.token;
-    const sellAmount = order.input.amount;
-    const buyToken = order.outputs[0].token;
-    const buyAmount = order.outputs[0].amount;
+    const sellTokenRaw = order.input?.token;
+    let sellAmountStr = order.input?.amount || order.input?.startAmount || order.input?.amountStr;
+
+    // UniswapX Dutch Orders usually have outputs[0]. Some might have output (singular) or multiple outputs.
+    const output = (order.outputs && order.outputs.length > 0) ? order.outputs[0] : (order.output || {});
+    const buyTokenRaw = output.token;
+    let buyAmountStr = output.amount || output.startAmount || output.amountStr;
+
+    if (!sellTokenRaw || !buyTokenRaw || !sellAmountStr || !buyAmountStr) {
+      return;
+    }
+
+    // Hex check: Some tokens or adapters return hex strings without 0x
+    const toDecimal = (val: string) => {
+      if (typeof val !== 'string') return val;
+      if (val.startsWith('0x')) return val;
+      // If it looks like hex (contains A-F) and is long, it's probably hex
+      if (/[a-fA-F]/.test(val) && val.length > 10) return `0x${val}`;
+      return val;
+    };
+
+    const sellAmount = toDecimal(sellAmountStr.toString());
+    const buyAmount = toDecimal(buyAmountStr.toString());
+
+    // 0x API expects 0xeeee... for native tokens, Uniswap often uses 0x0000...
+    const normalizeToken = (addr: string) => {
+      if (!addr) return addr;
+      if (addr.toLowerCase() === '0x0000000000000000000000000000000000000000') return '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      return addr;
+    };
+
+    const sellToken = normalizeToken(sellTokenRaw);
+    const buyToken = normalizeToken(buyTokenRaw);
+
+    if (!isAddress(sellToken) || !isAddress(buyToken)) {
+      return;
+    }
+
+    // Liquidity filter: only attempt arbitrage on orders with highly-liquid input tokens.
+    // 0x v1 (used for execution) only routes popular token pairs. Illiquid or obscure tokens
+    // (EURC, AERO, BRETT, etc.) get false-profitable v2 quotes but fail on v1 execution.
+    const chainTokens = CHAINS[chainId]?.tokens ?? {};
+    const LIQUID_SYMBOLS = ['WETH', 'WMATIC', 'USDC', 'USDT', 'WBTC', 'DAI', 'cbETH', 'cbBTC', 'AERO'];
+    const isNativeEth = (addr: string) =>
+      addr.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ||
+      addr.toLowerCase() === '0x0000000000000000000000000000000000000000';
+    const liquidTokenAddresses = new Set(
+      LIQUID_SYMBOLS
+        .map((sym) => (chainTokens[sym] as string | undefined)?.toLowerCase())
+        .filter(Boolean) as string[]
+    );
+    const isLiquid = (addr: string) => isNativeEth(addr) || liquidTokenAddresses.has(addr.toLowerCase());
+
+    if (!isLiquid(sellToken) || !isLiquid(buyToken)) {
+      return; // Skip if either token is not in the high-liquidity allowlist
+    }
+
+    if (Math.random() < 0.1) {
+      logger.info(`🔍 DEBUG: Raw UniswapX Order structure for ${order.orderHash.slice(0, 10)}: ${JSON.stringify({ input: order.input, outputs: order.outputs }).slice(0, 500)}`);
+    }
 
     try {
-      // 1. Get Best Quote from Aggregators (0x, 1inch, ParaSwap)
-      const quote = await this.arbitrageService.discoverAggregatorArb(
+      // 1. Get Best Quote from Aggregators
+      // We use the discoverAggregatorArb which will now use 0x v2 correctly
+      const bestAggQuote = await this.arbitrageService.discoverAggregatorArb(
         chainId,
         sellToken,
         buyToken,
         sellAmount
       );
 
-      if (!quote) return;
+      if (!bestAggQuote) return;
 
-      // 2. Profitability check (Aggregator BuyAmount > Intent BuyAmount)
-      if (BigInt(quote.buyAmount) > BigInt(buyAmount)) {
-        const profit = BigInt(quote.buyAmount) - BigInt(buyAmount);
-        const decimals = await this.arbitrageService.getTokenDecimals(chainId, buyToken);
-        const formattedProfit = formatUnits(profit, decimals);
+      // UniswapX Price is the buyAmount we must give to the filler
+      const uniswapPrice = BigInt(buyAmount);
+      const aggregatorPrice = BigInt(bestAggQuote.buyAmount);
 
-        logger.info(`🔥 PROFITABLE: ${quote.source} gives ${quote.buyAmount} (vs intent ${buyAmount}) for ${order.orderHash.slice(0, 10)}. Expected profit: ${formattedProfit} tokens.`);
-        await this.executeArbitrage(order, chainId, quote, source);
+      if (aggregatorPrice <= uniswapPrice) return;
+
+      const profit = aggregatorPrice - uniswapPrice;
+      const profitDecimals = await this.arbitrageService.getTokenDecimals(chainId, buyToken);
+      const profitFormatted = formatUnits(profit, profitDecimals);
+
+      logger.info(`🔥 PROFITABLE: ${bestAggQuote.source} buyAmount=${bestAggQuote.buyAmount} vs UniswapX buyAmount=${buyAmount} | PROFIT=${profitFormatted} ${buyToken.slice(0, 6)} | Hash=${order.orderHash}`);
+
+      if (profit > 0n) {
+        await this.executeArbitrage(order, chainId, bestAggQuote, source);
       }
     } catch (e) {
       // Skip
@@ -165,59 +247,108 @@ export class FillerService {
 
     try {
       const rpcUrl = process.env[`RPC_URL_${chainId}`];
-      const publicClient = this.getPublicClient(chainId);
+      const chain = this.CHAIN_MAP[chainId] || mainnet;
       const walletClient = createWalletClient({
         account: this.account,
-        chain: publicClient.chain,
+        chain,
         transport: http(rpcUrl),
       });
 
       // 1. Construct Arbitrage Opportunity
-      // Fix: 0x quote uses quote.transaction.*, 1inch/ParaSwap use quote.to/data/value directly
-      const aggTo = quote.transaction?.to ?? quote.to;
-      const aggData = quote.transaction?.data ?? quote.data;
-      const aggValue = quote.transaction?.value ?? quote.value;
+      // We need the REVERSE of the original quote:
+      //   - Original quote: sellToken → buyToken (what user is selling → what user is buying)
+      //   - Execution quote: input token (what we receive from order fill) → output token (USDC we borrowed)
+      // The taker MUST be the broker contract, not the wallet.
+      const output = (order.outputs && order.outputs.length > 0) ? order.outputs[0] : {};
+      const inputToken = order.input?.token;
+      const outputToken = output.token;
+      const inputAmount = order.input?.startAmount ?? order.input?.maxAmount ?? order.input?.amount;
+
+      if (!inputToken || !outputToken || !inputAmount) {
+        logger.warn('❌ executeArbitrage: Missing input/output token or amount from order');
+        return;
+      }
+
+      // Fetch an execution quote using 0x v1 (allowance-based, skipValidation).
+      // getExecutionQuote handles native ETH normalization (input → 0xeeee, output → WETH).
+      const execQuote = await this.arbitrageService.getExecutionQuote(
+        chainId,
+        inputToken,
+        outputToken,
+        inputAmount
+      );
+
+      if (!execQuote) {
+        logger.warn('❌ executeArbitrage: Could not get execution quote from aggregator');
+        return;
+      }
+
+      const eq = execQuote as any;
+      const aggTo = eq.transaction?.to ?? eq.to;
+      const aggData = eq.transaction?.data ?? eq.data;
+      const aggValue = eq.transaction?.value ?? eq.value;
+      const allowanceTarget = eq.allowanceTarget || eq.transaction?.allowanceTarget || aggTo;
+
+      logger.info(`📊 Execution Quote Result: buyAmount=${eq.buyAmount} (${eq.source || 'Aggregator'}) | Need to repay ~${inputAmount} (borrowed)`);
 
       const opportunity = await this.arbitrageService.fillIntentArbitrage({
         chainId,
         intent: {
           ...order,
           reactor: CHAINS[chainId].uniswapXReactor,
-          fillData: encodeAbiParameters(
-            parseAbiParameters('(bytes, bytes)[]'),
-            [[[order.encodedOrder as Hex, order.signature as Hex]]]
-          )
+          fillData: encodeFunctionData({
+            abi: REACTOR_ABI,
+            functionName: 'execute',
+            args: [[{ order: order.encodedOrder as Hex, signature: order.signature as Hex }]]
+          })
         },
         source: source as any,
-        aggregatorQuote: { to: aggTo, data: aggData, value: aggValue }
+        aggregatorQuote: {
+          to: aggTo,
+          data: aggData,
+          value: aggValue,
+          allowanceTarget
+        }
       });
 
       if (!opportunity) return;
 
-      // 2. Encode FlashParams
-      const encodedParams = this.arbitrageService.encodeFlashParams(opportunity);
-
-      // 3. Simulate before sending (avoid wasted gas on reverts)
-      const ok = await this.arbitrageService.simulateExecution(
-        chainId, broker, opportunity.borrowToken, opportunity.borrowAmount,
-        encodedParams, this.account.address
-      );
-      if (!ok) {
-        logger.warn(`⚠️  Simulation failed for intent ${order.orderHash?.slice(0, 10)} — skipping`);
+      // 2. Select best 0% Provider
+      const provider = await this.arbitrageService.findBestFlashLoanProvider(chainId, opportunity.borrowToken, opportunity.borrowAmount);
+      if (!provider) {
+        logger.warn(`🚫 No 0% flash loan liquidity found for ${opportunity.borrowToken} on chain ${chainId}`);
         return;
       }
+      opportunity.flashProvider = provider;
 
-      // 4. Execute through AtomicBroker
+      // 3. Simulate before sending
+      const ok = await this.arbitrageService.simulateExecution(chainId, opportunity, this.account.address);
+      if (!ok) return;
+
+      // 4. Execute through AtomicBroker via specific provider method
+      const encodedParams = this.arbitrageService.encodeFlashParams(opportunity);
+      let functionName = 'executeBalancer';
+      let args: any[] = [];
+
+      if (provider.type === 'balancer') {
+        functionName = 'executeBalancer';
+        args = [provider.target as Hex, opportunity.borrowToken as Hex, opportunity.borrowAmount, encodedParams];
+      } else if (provider.type === 'sky') {
+        functionName = 'executeSky';
+        args = [provider.target as Hex, opportunity.borrowToken as Hex, opportunity.borrowAmount, encodedParams];
+      }
+
+      logger.info(`💸 Using ${provider.name} flash loan...`);
       const txHash = await walletClient.writeContract({
         address: broker,
-        abi: BROKER_ABI,
-        functionName: 'execute',
-        args: [opportunity.borrowToken as Hex, opportunity.borrowAmount, encodedParams],
-        chain: publicClient.chain,
+        abi: parseAbi([`function ${functionName}(address, address, uint256, bytes) external`]),
+        functionName: functionName as any,
+        args: args as any,
+        chain,
       });
 
       logger.info(`✅ Arbitrage TX submitted: ${txHash}`);
-      dbService.saveOrder({ ...order, status: 'filled', chainId });
+      dbService.saveOrder({ ...order, status: 'filled', chainId, txHash });
       await notifier.notifyFill(txHash, chainId);
     } catch (error: any) {
       logger.error(`❌ Arbitrage failed: ${error.message}`);
@@ -233,34 +364,49 @@ export class FillerService {
 
     try {
       const rpcUrl = process.env[`RPC_URL_${chainId}`];
-      const publicClient = this.getPublicClient(chainId);
+      const chain = this.CHAIN_MAP[chainId] || mainnet;
       const walletClient = createWalletClient({
         account: this.account,
-        chain: publicClient.chain,
+        chain,
         transport: http(rpcUrl),
       });
 
-      const encodedParams = this.arbitrageService.encodeFlashParams(opportunity);
-
-      // Simulate before sending — skip if it would revert
-      const ok = await this.arbitrageService.simulateExecution(
-        chainId, broker, opportunity.borrowToken, opportunity.borrowAmount,
-        encodedParams, this.account.address
-      );
-      if (!ok) {
-        logger.warn(`⚠️  Direct DEX arb simulation failed on chain ${chainId} — skipping`);
+      // 1. Select best 0% Provider
+      const provider = await this.arbitrageService.findBestFlashLoanProvider(chainId, opportunity.borrowToken, opportunity.borrowAmount);
+      if (!provider) {
+        logger.warn(`🚫 No 0% flash loan liquidity found for ${opportunity.borrowToken} on chain ${chainId}`);
         return;
       }
+      opportunity.flashProvider = provider;
 
+      // 2. Simulate before sending
+      const ok = await this.arbitrageService.simulateExecution(chainId, opportunity, this.account.address);
+      if (!ok) return;
+
+      // 3. Execute
+      const encodedParams = this.arbitrageService.encodeFlashParams(opportunity);
+      let functionName = 'executeBalancer';
+      let args: any[] = [];
+
+      if (provider.type === 'balancer') {
+        functionName = 'executeBalancer';
+        args = [provider.target as Hex, opportunity.borrowToken as Hex, opportunity.borrowAmount, encodedParams];
+      } else if (provider.type === 'sky') {
+        functionName = 'executeSky';
+        args = [provider.target as Hex, opportunity.borrowToken as Hex, opportunity.borrowAmount, encodedParams];
+      }
+
+      logger.info(`💸 Using ${provider.name} flash loan...`);
       const txHash = await walletClient.writeContract({
         address: broker,
-        abi: BROKER_ABI,
-        functionName: 'execute',
-        args: [opportunity.borrowToken as Hex, opportunity.borrowAmount, encodedParams],
-        chain: publicClient.chain,
+        abi: parseAbi([`function ${functionName}(address, address, uint256, bytes) external`]),
+        functionName: functionName as any,
+        args: args as any,
+        chain,
       });
 
       logger.info(`✅ Direct DEX Arb TX submitted: ${txHash}`);
+      dbService.saveOrder({ ...opportunity, status: 'filled', chainId, txHash } as any);
       await notifier.notifyFill(txHash, chainId);
     } catch (error: any) {
       logger.error(`❌ Direct DEX Arb failed: ${error.message}`);
