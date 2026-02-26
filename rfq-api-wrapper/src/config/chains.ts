@@ -1962,7 +1962,7 @@ export const CHAINS: Record<number, ChainConfig> = {
         },
         uniswapXReactor: '0x000000001Ec5656dcdB24D90DFa42742738De729',
         balancerVault: '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
-        atomicBroker: '0x92109142178e62e61958071ce2e172211a948602',
+        atomicBroker: '0x5c467807f2bfb74e07ea478d8b6efb58d0567467',
         ensoRouter: '0xF75584eF6673aD213a685a1B58Cc0330B8eA22Cf',
     },
     '34443': {

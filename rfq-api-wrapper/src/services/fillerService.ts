@@ -201,6 +201,12 @@ export class FillerService {
       return; // Skip if either token is not in the high-liquidity allowlist
     }
 
+    // Native ETH filter: Until we implement a dedicated native ETH filler with reactorCallback,
+    // we must skip native ETH orders to avoid the non-payable reactor.execute() revert.
+    if (isNativeEth(sellToken) || isNativeEth(buyToken)) {
+      return;
+    }
+
     if (Math.random() < 0.1) {
       logger.info(`🔍 DEBUG: Raw UniswapX Order structure for ${order.orderHash.slice(0, 10)}: ${JSON.stringify({ input: order.input, outputs: order.outputs }).slice(0, 500)}`);
     }

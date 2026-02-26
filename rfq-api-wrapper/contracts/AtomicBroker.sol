@@ -174,9 +174,8 @@ contract AtomicBroker is Ownable {
     // Morpho usually requires a specific repayment. Let's stick to Balancer and Sky for the first pass
     // as Morpho's callback signature is (uint256 amount, bytes calldata data).
 
-    function withdraw(address token) external onlyOwner {
-        uint256 balance = IERC20(token).balanceOf(address(this));
-        IERC20(token).transfer(owner(), balance);
+    function withdraw(address token, uint256 amount) external onlyOwner {
+        IERC20(token).transfer(owner(), amount);
     }
 
     function withdrawETH() external onlyOwner {
@@ -184,4 +183,5 @@ contract AtomicBroker is Ownable {
     }
 
     receive() external payable {}
+    fallback() external payable {}
 }
